@@ -1,31 +1,37 @@
 // This is an AI-powered tool that flags subscriptions with unusual end dates, such as those about to expire.
-
+/**
+ * @fileOverview Инструмент на базе ИИ для мониторинга подписок с необычными датами окончания или статусами.
+ *
+ * - smartStatusMonitor - Функция для анализа подписок и выявления проблемных.
+ * - SmartStatusMonitorInput - Тип входных данных для функции smartStatusMonitor.
+ * - SmartStatusMonitorOutput - Тип возвращаемых данных функции smartStatusMonitor.
+ */
 'use server';
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SubscriptionSchema = z.object({
-  id: z.string().describe('The unique identifier of the subscription.'),
-  userId: z.string().describe('The ID of the user who owns the subscription.'),
-  productId: z.string().describe('The ID of the product the subscription is for.'),
-  startDate: z.string().datetime().describe('The date and time the subscription started.'),
-  endDate: z.string().datetime().describe('The date and time the subscription is set to end.'),
-  status: z.enum(['active', 'inactive', 'pending', 'canceled']).describe('The current status of the subscription.'),
-  autoRenew: z.boolean().describe('Whether the subscription is set to automatically renew.'),
+  id: z.string().describe('Уникальный идентификатор подписки.'),
+  userId: z.string().describe('ID пользователя, которому принадлежит подписка.'),
+  productId: z.string().describe('ID товара, на который оформлена подписка.'),
+  startDate: z.string().datetime().describe('Дата и время начала действия подписки.'),
+  endDate: z.string().datetime().describe('Дата и время окончания действия подписки.'),
+  status: z.enum(['active', 'inactive', 'pending', 'canceled', 'expired']).describe('Текущий статус подписки.'), // Added 'expired' to match types/index.ts
+  autoRenew: z.boolean().describe('Указывает, настроено ли автопродление подписки.'),
 });
 
 export type Subscription = z.infer<typeof SubscriptionSchema>;
 
-const SmartStatusMonitorInputSchema = z.array(SubscriptionSchema).describe('An array of subscriptions to analyze.');
+const SmartStatusMonitorInputSchema = z.array(SubscriptionSchema).describe('Массив подписок для анализа.');
 export type SmartStatusMonitorInput = z.infer<typeof SmartStatusMonitorInputSchema>;
 
 const FlaggedSubscriptionSchema = z.object({
-  subscriptionId: z.string().describe('The ID of the subscription that was flagged.'),
-  reason: z.string().describe('The reason why the subscription was flagged.'),
+  subscriptionId: z.string().describe('ID отмеченной подписки.'),
+  reason: z.string().describe('Причина, по которой подписка была отмечена (на русском языке).'),
 });
 
-const SmartStatusMonitorOutputSchema = z.array(FlaggedSubscriptionSchema).describe('An array of subscriptions that have unusual end dates or statuses.');
+const SmartStatusMonitorOutputSchema = z.array(FlaggedSubscriptionSchema).describe('Массив подписок с необычными датами окончания или статусами.');
 export type SmartStatusMonitorOutput = z.infer<typeof SmartStatusMonitorOutputSchema>;
 
 export async function smartStatusMonitor(input: SmartStatusMonitorInput): Promise<SmartStatusMonitorOutput> {
@@ -36,13 +42,13 @@ const smartStatusMonitorPrompt = ai.definePrompt({
   name: 'smartStatusMonitorPrompt',
   input: {schema: SmartStatusMonitorInputSchema},
   output: {schema: SmartStatusMonitorOutputSchema},
-  prompt: `You are an AI assistant designed to analyze a list of subscriptions and identify any that have unusual end dates or statuses.  Unusual means close to expiring (within 7 days), or cancelled when autoRenew is true.
+  prompt: `Вы — ИИ-ассистент, предназначенный для анализа списка подписок и выявления тех, у которых необычные даты окончания или статусы. Необычные означает: срок действия скоро истекает (в течение 7 дней), или статус 'cancelled' (отменена) / 'expired' (истекла) при включенном автопродлении (autoRenew равно true).
 
-Analyze the following subscriptions and flag any that meet these criteria.  Return a JSON array of flagged subscription objects, with the subscriptionId and a brief reason.
+Проанализируйте следующие подписки и отметьте те, которые соответствуют этим критериям. Верните JSON-массив объектов отмеченных подписок, содержащий subscriptionId и краткое описание причины на русском языке.
 
-Subscriptions:
+Подписки:
 {{#each this}}
-- ID: {{id}}, User ID: {{userId}}, Product ID: {{productId}}, Start Date: {{startDate}}, End Date: {{endDate}}, Status: {{status}}, Auto Renew: {{autoRenew}}
+- ID: {{id}}, ID пользователя: {{userId}}, ID товара: {{productId}}, Дата начала: {{startDate}}, Дата окончания: {{endDate}}, Статус: {{status}}, Автопродление: {{autoRenew}}
 {{/each}}`,
 });
 

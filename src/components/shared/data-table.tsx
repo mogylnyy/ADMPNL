@@ -33,12 +33,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 interface ColumnDefinition<T> {
-  accessorKey: keyof T | string; // Allow dot notation for nested props e.g. user.name
+  accessorKey: keyof T | string; 
   header: string;
   cell?: (row: T) => React.ReactNode;
 }
 
-interface DataTableProps<T> {
+interface DataTableProps<T extends { id: string }> {
   columns: ColumnDefinition<T>[];
   data: T[];
   searchKey?: keyof T | string;
@@ -47,8 +47,15 @@ interface DataTableProps<T> {
   onDelete?: (item: T) => void;
   onView?: (item: T) => void;
   addNewButtonText?: string;
-  entityName?: string; // For delete confirmation
+  entityName?: string; 
 }
+
+const searchKeyDisplayNames: Record<string, string> = {
+  name: "названию",
+  username: "имени пользователя",
+  user_username: "имени пользователя",
+  id: "ID",
+};
 
 export function DataTable<T extends { id: string }>({
   columns,
@@ -58,12 +65,12 @@ export function DataTable<T extends { id: string }>({
   onEdit,
   onDelete,
   onView,
-  addNewButtonText = "Add New",
-  entityName = "item",
+  addNewButtonText = "Добавить",
+  entityName = "элемент",
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [itemToDelete, setItemToDelete] = React.useState<T | null>(null);
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Toast for deletion is handled by parent component via onDelete prop
 
   const filteredData = React.useMemo(() => {
     if (!searchKey || !searchTerm) return data;
@@ -74,27 +81,28 @@ export function DataTable<T extends { id: string }>({
   }, [data, searchTerm, searchKey]);
 
   const handleDeleteConfirm = () => {
-    if (itemToDelete) {
-      // Actual delete logic would go here
-      toast({
-        title: `${entityName} Deleted`,
-        description: `The ${entityName} "${itemToDelete.id}" has been notionally deleted.`,
-      });
-      setItemToDelete(null);
-      // You would typically refetch or update data here
+    if (itemToDelete && onDelete) {
+      onDelete(itemToDelete);
     }
+    setItemToDelete(null);
   };
   
   const getNestedValue = (obj: any, path: string) => {
     return path.split('.').reduce((acc, part) => acc && acc[part], obj);
   };
 
+  const getSearchPlaceholder = () => {
+    if (!searchKey) return "Поиск...";
+    const displayName = searchKeyDisplayNames[String(searchKey)] || String(searchKey);
+    return `Поиск по ${displayName}...`;
+  }
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between py-4">
         {searchKey && (
           <Input
-            placeholder={`Search by ${String(searchKey)}...`}
+            placeholder={getSearchPlaceholder()}
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             className="max-w-sm"
@@ -111,7 +119,7 @@ export function DataTable<T extends { id: string }>({
               {columns.map((column) => (
                 <TableHead key={String(column.accessorKey)}>{column.header}</TableHead>
               ))}
-              {(onEdit || onDelete || onView) && <TableHead>Actions</TableHead>}
+              {(onEdit || onDelete || onView) && <TableHead>Действия</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -128,16 +136,16 @@ export function DataTable<T extends { id: string }>({
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
+                            <span className="sr-only">Открыть меню</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          {onView && <DropdownMenuItem onClick={() => onView(row)}><Eye className="mr-2 h-4 w-4" /> View</DropdownMenuItem>}
-                          {onEdit && <DropdownMenuItem onClick={() => onEdit(row)}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>}
+                          <DropdownMenuLabel>Действия</DropdownMenuLabel>
+                          {onView && <DropdownMenuItem onClick={() => onView(row)}><Eye className="mr-2 h-4 w-4" /> Просмотреть</DropdownMenuItem>}
+                          {onEdit && <DropdownMenuItem onClick={() => onEdit(row)}><Edit className="mr-2 h-4 w-4" /> Изменить</DropdownMenuItem>}
                           {onDelete && <DropdownMenuSeparator />}
-                          {onDelete && <DropdownMenuItem onClick={() => setItemToDelete(row)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>}
+                          {onDelete && <DropdownMenuItem onClick={() => setItemToDelete(row)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Удалить</DropdownMenuItem>}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -146,8 +154,8 @@ export function DataTable<T extends { id: string }>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length + ((onEdit || onDelete) ? 1 : 0)} className="h-24 text-center">
-                  No results.
+                <TableCell colSpan={columns.length + ((onEdit || onDelete || onView) ? 1 : 0)} className="h-24 text-center">
+                  Нет данных.
                 </TableCell>
               </TableRow>
             )}
@@ -158,16 +166,15 @@ export function DataTable<T extends { id: string }>({
         <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the {entityName}
-                &nbsp;with ID "{itemToDelete.id}".
+                Это действие необратимо. {entityName || 'Элемент'} с ID "{itemToDelete.id}" будет удален(а) окончательно.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>Отмена</AlertDialogCancel>
               <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">
-                Delete
+                Удалить
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

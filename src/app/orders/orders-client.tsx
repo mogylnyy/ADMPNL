@@ -32,44 +32,54 @@ const statusIcons: Record<OrderStatus, React.ElementType> = {
   processing: Truck,
   completed: CheckCircle,
   cancelled: XCircle,
-  refunded: CheckCircle, // Or a specific refund icon
+  refunded: CheckCircle, 
 };
+
+const statusTranslations: Record<OrderStatus, string> = {
+  pending: "Ожидает",
+  paid: "Оплачен",
+  processing: "В обработке",
+  completed: "Завершен",
+  cancelled: "Отменен",
+  refunded: "Возмещен",
+};
+
 
 export function OrdersClient() {
   const [orders, setOrders] = React.useState<OrderWithDetails[]>(mockOrders);
   const { toast } = useToast();
 
   const columns = React.useMemo(() => [
-    { accessorKey: "id", header: "Order ID" },
-    { accessorKey: "user_username", header: "User", cell: (row: OrderWithDetails) => row.user_username || row.user_id },
-    { accessorKey: "product_name", header: "Product", cell: (row: OrderWithDetails) => row.product_name || row.product_id },
-    { accessorKey: "amount", header: "Amount", cell: (row: Order) => `$${row.amount.toFixed(2)}` },
-    { accessorKey: "status", header: "Status", cell: (row: Order) => {
+    { accessorKey: "id", header: "ID Заказа" },
+    { accessorKey: "user_username", header: "Пользователь", cell: (row: OrderWithDetails) => row.user_username || row.user_id },
+    { accessorKey: "product_name", header: "Товар", cell: (row: OrderWithDetails) => row.product_name || row.product_id },
+    { accessorKey: "amount", header: "Сумма", cell: (row: Order) => `$${row.amount.toFixed(2)}` },
+    { accessorKey: "status", header: "Статус", cell: (row: Order) => {
       const Icon = statusIcons[row.status] || Clock;
+      const statusText = statusTranslations[row.status] || row.status;
       return (
         <Badge className={`${statusColors[row.status] || 'bg-gray-400'} hover:${statusColors[row.status] || 'bg-gray-400'} text-white`}>
           <Icon className="mr-1 h-3 w-3" />
-          {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+          {statusText}
         </Badge>
       );
     }},
-    { accessorKey: "created_at", header: "Order Date", cell: (row: Order) => new Date(row.created_at).toLocaleString() },
-    { accessorKey: "paid_at", header: "Paid At", cell: (row: Order) => row.paid_at ? new Date(row.paid_at).toLocaleString() : 'N/A' },
+    { accessorKey: "created_at", header: "Дата заказа", cell: (row: Order) => new Date(row.created_at).toLocaleString() },
+    { accessorKey: "paid_at", header: "Оплачено", cell: (row: Order) => row.paid_at ? new Date(row.paid_at).toLocaleString() : 'Н/Д' },
   ], []);
 
   const handleConfirmPayment = (order: Order) => {
     if (order.status === 'pending') {
       setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'paid', paid_at: new Date().toISOString() } as OrderWithDetails : o));
-      toast({ title: "Payment Confirmed", description: `Payment for order "${order.id}" marked as paid.` });
+      toast({ title: "Оплата подтверждена", description: `Оплата по заказу "${order.id}" отмечена как оплаченная.` });
     } else {
-      toast({ title: "Action Not Allowed", description: `Order "${order.id}" is not pending payment.`, variant: "destructive" });
+      toast({ title: "Действие не разрешено", description: `Заказ "${order.id}" не ожидает оплаты.`, variant: "destructive" });
     }
   };
   
-  // Overriding the default DataTable actions column
   const actionColumn = {
     accessorKey: "actions",
-    header: "Actions",
+    header: "Действия",
     cell: (row: OrderWithDetails) => (
       <Button 
         variant="outline" 
@@ -77,20 +87,19 @@ export function OrdersClient() {
         onClick={() => handleConfirmPayment(row)}
         disabled={row.status !== 'pending'}
       >
-        Confirm Payment
+        Подтвердить оплату
       </Button>
     ),
   };
 
   return (
     <>
-      <PageHeader title="Orders" description="View and manage customer orders." />
+      <PageHeader title="Заказы" description="Просмотр и управление заказами клиентов." />
       <DataTable
         columns={[...columns, actionColumn]}
         data={orders}
-        searchKey="user_username" // Example: search by username
-        entityName="Order"
-        // No AddNew for orders typically, they come from system
+        searchKey="user_username" 
+        entityName="Заказ"
       />
     </>
   );

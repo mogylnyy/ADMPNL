@@ -16,7 +16,7 @@ export function Header() {
           {/* <ThemeToggle /> */}
           <Button variant="ghost" size="icon">
             <UserCircle className="h-6 w-6" />
-            <span className="sr-only">User Profile</span>
+            <span className="sr-only">Профиль пользователя</span>
           </Button>
         </div>
       </div>

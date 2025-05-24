@@ -41,17 +41,17 @@ export function UsersClient() {
   const columns = React.useMemo(() => [
     { accessorKey: "id", header: "ID" },
     { accessorKey: "telegram_id", header: "Telegram ID" },
-    { accessorKey: "username", header: "Username", cell: (row: User) => row.username || 'N/A' },
-    { accessorKey: "first_name", header: "First Name", cell: (row: User) => row.first_name || 'N/A' },
-    { accessorKey: "balance", header: "Balance", cell: (row: User) => `$${row.balance.toFixed(2)}` },
-    { accessorKey: "ordersCount", header: "Orders" },
-    { accessorKey: "activeSubscriptionsCount", header: "Active Subs" },
-    { accessorKey: "created_at", header: "Joined At", cell: (row: User) => new Date(row.created_at).toLocaleDateString() },
+    { accessorKey: "username", header: "Имя пользователя", cell: (row: User) => row.username || 'Н/Д' },
+    { accessorKey: "first_name", header: "Имя", cell: (row: User) => row.first_name || 'Н/Д' },
+    { accessorKey: "balance", header: "Баланс", cell: (row: User) => `$${row.balance.toFixed(2)}` },
+    { accessorKey: "ordersCount", header: "Заказы" },
+    { accessorKey: "activeSubscriptionsCount", header: "Активные подписки" },
+    { accessorKey: "created_at", header: "Дата регистрации", cell: (row: User) => new Date(row.created_at).toLocaleDateString() },
   ], []);
   
   const handleEdit = (user: UserWithDetails) => {
     setEditingUser(user);
-    setBalanceAdjustment(user.balance); // Initialize with current balance for editing
+    setBalanceAdjustment(user.balance); 
     setIsModalOpen(true);
   };
   
@@ -59,7 +59,7 @@ export function UsersClient() {
     if (editingUser) {
       const updatedUser = { ...editingUser, balance: balanceAdjustment };
       setUsers(prev => prev.map(u => u.id === editingUser.id ? updatedUser : u));
-      toast({ title: "Balance Updated", description: `Balance for ${editingUser.username || editingUser.id} updated to $${balanceAdjustment.toFixed(2)}.` });
+      toast({ title: "Баланс обновлен", description: `Баланс для ${editingUser.username || editingUser.id} обновлен до $${balanceAdjustment.toFixed(2)}.` });
       setIsModalOpen(false);
       setEditingUser(null);
     }
@@ -67,26 +67,26 @@ export function UsersClient() {
 
   return (
     <>
-      <PageHeader title="Users" description="Manage store users and their details." />
+      <PageHeader title="Пользователи" description="Управление пользователями магазина и их данными." />
       <DataTable
         columns={columns}
         data={users}
         searchKey="username"
-        onEdit={handleEdit} // We'll use this for "Manage Balance"
-        entityName="User"
+        onEdit={handleEdit} 
+        entityName="Пользователь"
       />
       {editingUser && (
         <Dialog open={isModalOpen} onOpenChange={() => { setIsModalOpen(false); setEditingUser(null); }}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Manage Balance for {editingUser.username || editingUser.id}</DialogTitle>
+              <DialogTitle>Управление балансом для {editingUser.username || editingUser.id}</DialogTitle>
               <DialogDescription>
-                Current Balance: ${editingUser.balance.toFixed(2)}. Adjust the balance below.
+                Текущий баланс: ${editingUser.balance.toFixed(2)}. Измените баланс ниже.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="balance" className="text-right">New Balance</Label>
+                <Label htmlFor="balance" className="text-right">Новый баланс</Label>
                 <Input 
                   id="balance" 
                   name="balance" 
@@ -100,8 +100,8 @@ export function UsersClient() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => { setIsModalOpen(false); setEditingUser(null); }}>Cancel</Button>
-              <Button type="button" onClick={handleSaveBalance}>Save Balance</Button>
+              <Button type="button" variant="outline" onClick={() => { setIsModalOpen(false); setEditingUser(null); }}>Отмена</Button>
+              <Button type="button" onClick={handleSaveBalance}>Сохранить баланс</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

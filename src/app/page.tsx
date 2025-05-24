@@ -6,33 +6,33 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ChartConfig } from "@/components/ui/chart";
 
 const salesData = [
-  { month: "Jan", sales: Math.floor(Math.random() * 5000) + 1000 },
-  { month: "Feb", sales: Math.floor(Math.random() * 5000) + 1000 },
-  { month: "Mar", sales: Math.floor(Math.random() * 5000) + 1000 },
-  { month: "Apr", sales: Math.floor(Math.random() * 5000) + 1000 },
-  { month: "May", sales: Math.floor(Math.random() * 5000) + 1000 },
-  { month: "Jun", sales: Math.floor(Math.random() * 5000) + 1000 },
+  { month: "Янв", sales: Math.floor(Math.random() * 5000) + 1000 },
+  { month: "Фев", sales: Math.floor(Math.random() * 5000) + 1000 },
+  { month: "Мар", sales: Math.floor(Math.random() * 5000) + 1000 },
+  { month: "Апр", sales: Math.floor(Math.random() * 5000) + 1000 },
+  { month: "Май", sales: Math.floor(Math.random() * 5000) + 1000 },
+  { month: "Июн", sales: Math.floor(Math.random() * 5000) + 1000 },
 ];
 
 const usersData = [
-  { month: "Jan", users: Math.floor(Math.random() * 200) + 50 },
-  { month: "Feb", users: Math.floor(Math.random() * 200) + 50 },
-  { month: "Mar", users: Math.floor(Math.random() * 200) + 50 },
-  { month: "Apr", users: Math.floor(Math.random() * 200) + 50 },
-  { month: "May", users: Math.floor(Math.random() * 200) + 50 },
-  { month: "Jun", users: Math.floor(Math.random() * 200) + 50 },
+  { month: "Янв", users: Math.floor(Math.random() * 200) + 50 },
+  { month: "Фев", users: Math.floor(Math.random() * 200) + 50 },
+  { month: "Мар", users: Math.floor(Math.random() * 200) + 50 },
+  { month: "Апр", users: Math.floor(Math.random() * 200) + 50 },
+  { month: "Май", users: Math.floor(Math.random() * 200) + 50 },
+  { month: "Июн", users: Math.floor(Math.random() * 200) + 50 },
 ];
 
 const salesChartConfig = {
   sales: {
-    label: "Sales",
+    label: "Продажи",
     color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig;
 
 const usersChartConfig = {
   users: {
-    label: "New Users",
+    label: "Новые пользователи",
     color: "hsl(var(--chart-2))",
   },
 } satisfies ChartConfig;
@@ -41,23 +41,23 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <MetricCard title="Total Revenue" value="$12,345" icon={DollarSign} description="+20.1% from last month" />
-        <MetricCard title="Active Subscriptions" value="1,234" icon={ShoppingCart} description="+180 since last week" />
-        <MetricCard title="New Users" value="320" icon={Users} description="+32 this month" />
+        <MetricCard title="Общий доход" value="$12,345" icon={DollarSign} description="+20.1% с прошлого месяца" />
+        <MetricCard title="Активные подписки" value="1,234" icon={ShoppingCart} description="+180 с прошлой недели" />
+        <MetricCard title="Новые пользователи" value="320" icon={Users} description="+32 в этом месяце" />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <PlaceholderChart
-          title="Sales Overview"
-          description="Monthly sales trend."
+          title="Обзор продаж"
+          description="Тренд ежемесячных продаж."
           data={salesData}
           dataKey="sales"
           xAxisKey="month"
           config={salesChartConfig}
         />
         <PlaceholderChart
-          title="New Users"
-          description="Monthly new user registration."
+          title="Новые пользователи"
+          description="Регистрация новых пользователей по месяцам."
           data={usersData}
           dataKey="users"
           xAxisKey="month"
@@ -67,17 +67,17 @@ export default function DashboardPage() {
       
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle>Быстрые действия</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button variant="default" size="lg">
-            <PlusCircle className="mr-2 h-5 w-5" /> Add New Product
+            <PlusCircle className="mr-2 h-5 w-5" /> Добавить новый товар
           </Button>
           <Button variant="outline" size="lg">
-            <Send className="mr-2 h-5 w-5" /> Create Broadcast
+            <Send className="mr-2 h-5 w-5" /> Создать рассылку
           </Button>
           <Button variant="outline" size="lg">
-            <MessageSquare className="mr-2 h-5 w-5" /> View Chats
+            <MessageSquare className="mr-2 h-5 w-5" /> Просмотреть чаты
           </Button>
         </CardContent>
       </Card>

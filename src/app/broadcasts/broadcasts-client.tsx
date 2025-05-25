@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { generateBroadcastMessage, type GenerateBroadcastMessageInput } from "@/ai/flows/generate-broadcast-flow";
-import { Bot, Send, Sparkles, Loader2, CalendarIcon, Filter, Clock, Repeat } from "lucide-react";
+import { Bot, Send, Sparkles, Loader2, CalendarIcon, Filter, Clock, Repeat, Image as ImageIcon, Package as PackageIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from 'date-fns/locale';
 import type { Category } from "@/types";
@@ -44,6 +44,8 @@ export function BroadcastsClient() {
   const [scheduleType, setScheduleType] = React.useState<'once' | 'weekly' | 'monthly'>('once');
   
   const [selectedCategories, setSelectedCategories] = React.useState<string[]>([]);
+  const [specificProducts, setSpecificProducts] = React.useState<string>("");
+  const [imageURL, setImageURL] = React.useState<string>("");
 
   const activeCategories = React.useMemo(() => mockCategories.filter(c => c.active), []);
 
@@ -66,13 +68,18 @@ export function BroadcastsClient() {
     }
     setIsGenerating(true);
     try {
-      let targetAudienceDescription: string | undefined = undefined;
+      let audienceParts: string[] = [];
       if (selectedCategories.length > 0) {
         const categoryNames = selectedCategories.map(catId => mockCategories.find(c => c.id === catId)?.name).filter(Boolean);
         if (categoryNames.length > 0) {
-          targetAudienceDescription = `Сообщение для пользователей, которые ранее покупали товары из категорий: ${categoryNames.join(', ')}.`;
+          audienceParts.push(`пользователи, которые ранее покупали товары из категорий: ${categoryNames.join(', ')}`);
         }
       }
+      if (specificProducts.trim()) {
+        audienceParts.push(`пользователи, которые ранее покупали следующие товары: ${specificProducts.trim()}`);
+      }
+
+      const targetAudienceDescription = audienceParts.length > 0 ? `Сообщение для: ${audienceParts.join('; ')}.` : undefined;
 
       const input: GenerateBroadcastMessageInput = { instructions, targetAudienceDescription };
       const result = await generateBroadcastMessage(input);
@@ -98,7 +105,7 @@ export function BroadcastsClient() {
     const dateTime = new Date(scheduleDate);
     const [hours, minutes] = scheduleTime.split(':').map(Number);
     dateTime.setHours(hours, minutes);
-    dateTime.setSeconds(0, 0); // Ensure seconds and milliseconds are zero
+    dateTime.setSeconds(0, 0); 
     return dateTime;
   };
   
@@ -117,7 +124,6 @@ export function BroadcastsClient() {
         return `Однократно: ${format(fullDate, "PPP", { locale: ru })} в ${scheduleTime}`;
     }
   };
-
 
   const handleSendMessage = async () => {
     const messageToSend = generatedMessage.trim() || instructions.trim();
@@ -142,9 +148,22 @@ export function BroadcastsClient() {
 
     setIsSending(true);
     
+    let targetAudienceLog = "Все пользователи";
+    const audienceDetails: string[] = [];
+    if (selectedCategories.length > 0) {
+        audienceDetails.push(`Категории: ${selectedCategories.map(id => mockCategories.find(c=>c.id === id)?.name || id).join(', ')}`);
+    }
+    if (specificProducts.trim()) {
+        audienceDetails.push(`Товары: ${specificProducts.trim()}`);
+    }
+    if (audienceDetails.length > 0) {
+        targetAudienceLog = audienceDetails.join('; ');
+    }
+
     const logData: any = {
         message: messageToSend,
-        targetCategories: selectedCategories.length > 0 ? selectedCategories.map(id => mockCategories.find(c=>c.id === id)?.name || id) : "Все пользователи",
+        imageUrl: imageURL.trim() || "Нет изображения",
+        targetAudience: targetAudienceLog,
         scheduled: isScheduled,
         scheduleType: isScheduled ? scheduleType : 'immediate',
         scheduleDescription: getScheduleDescription(),
@@ -195,7 +214,7 @@ export function BroadcastsClient() {
     <>
       <PageHeader
         title="Создание рассылки"
-        description="Подготовьте и отправьте сообщения вашим пользователям через Telegram-бота. Вы можете настроить немедленную, однократную или регулярную отправку."
+        description="Подготовьте и отправьте сообщения вашим пользователям через Telegram-бота. Вы можете настроить немедленную, однократную или регулярную отправку, а также прикрепить изображение."
       />
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -206,21 +225,35 @@ export function BroadcastsClient() {
                 Умная рассылка с AI
                 </CardTitle>
                 <CardDescription>
-                Опишите, о чем должна быть рассылка (например, анонс, акция, конкретные товары), и AI поможет составить текст.
-                Затем вы сможете его отредактировать и отправить.
+                Опишите, о чем должна быть рассылка, и AI поможет составить текст.
+                Укажите URL изображения, если оно должно сопровождать сообщение.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-2">
-                <Label htmlFor="ai-instructions">Инструкции для AI:</Label>
-                <Textarea
-                    id="ai-instructions"
-                    placeholder="Пример: Сообщить о новой акции - скидка 20% на все премиум подписки до конца недели. Поблагодарить за использование сервиса."
-                    value={instructions}
-                    onChange={(e) => setInstructions(e.target.value)}
-                    rows={4}
-                    className="shadow-sm"
-                />
+                    <Label htmlFor="ai-instructions">Инструкции для AI:</Label>
+                    <Textarea
+                        id="ai-instructions"
+                        placeholder="Пример: Сообщить о новой акции - скидка 20% на все премиум подписки до конца недели."
+                        value={instructions}
+                        onChange={(e) => setInstructions(e.target.value)}
+                        rows={3}
+                        className="shadow-sm"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="image-url" className="flex items-center">
+                        <ImageIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                        URL изображения (опционально):
+                    </Label>
+                    <Input 
+                        id="image-url"
+                        type="url"
+                        placeholder="https://example.com/image.png"
+                        value={imageURL}
+                        onChange={(e) => setImageURL(e.target.value)}
+                        className="shadow-sm"
+                    />
                 </div>
                 <Button onClick={handleGenerateMessage} disabled={isGenerating || !instructions.trim()}>
                 {isGenerating ? (
@@ -247,7 +280,7 @@ export function BroadcastsClient() {
                 placeholder="Текст вашей рассылки..."
                 value={generatedMessage || instructions}
                 onChange={(e) => setGeneratedMessage(e.target.value)}
-                rows={8}
+                rows={6}
                 className="shadow-sm"
                 />
             </CardContent>
@@ -266,7 +299,7 @@ export function BroadcastsClient() {
                     <div className="flex items-center space-x-2">
                         <Checkbox id="schedule-send" checked={isScheduled} onCheckedChange={(checked) => {
                             setIsScheduled(!!checked);
-                            if (!checked) setScheduleType('once'); // Reset to once if unscheduled
+                            if (!checked) setScheduleType('once'); 
                         }} />
                         <Label htmlFor="schedule-send">Запланировать отправку</Label>
                     </div>
@@ -291,7 +324,7 @@ export function BroadcastsClient() {
                                     onSelect={setScheduleDate}
                                     initialFocus
                                     locale={ru}
-                                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} // Disable past dates
+                                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                                     />
                                 </PopoverContent>
                                 </Popover>
@@ -339,21 +372,41 @@ export function BroadcastsClient() {
                         <Filter className="mr-2 h-5 w-5 text-primary" />
                         Фильтр аудитории
                     </CardTitle>
-                    <CardDescription>Выберите категории товаров, которые покупали пользователи, чтобы сузить аудиторию рассылки. Если ничего не выбрано, рассылка будет для всех.</CardDescription>
+                    <CardDescription>Сузьте аудиторию рассылки. Если ничего не выбрано, рассылка будет для всех.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2 max-h-60 overflow-y-auto">
-                    {activeCategories.length > 0 ? activeCategories.map(category => (
-                        <div key={category.id} className="flex items-center space-x-2">
-                            <Checkbox 
-                                id={`cat-${category.id}`} 
-                                checked={selectedCategories.includes(category.id)}
-                                onCheckedChange={() => handleCategoryToggle(category.id)}
-                            />
-                            <Label htmlFor={`cat-${category.id}`} className="font-normal">{category.name}</Label>
+                <CardContent className="space-y-4">
+                    <div>
+                        <Label className="text-sm font-medium">По категориям купленных товаров:</Label>
+                        <div className="space-y-2 mt-2 max-h-40 overflow-y-auto border p-2 rounded-md">
+                            {activeCategories.length > 0 ? activeCategories.map(category => (
+                                <div key={category.id} className="flex items-center space-x-2">
+                                    <Checkbox 
+                                        id={`cat-${category.id}`} 
+                                        checked={selectedCategories.includes(category.id)}
+                                        onCheckedChange={() => handleCategoryToggle(category.id)}
+                                    />
+                                    <Label htmlFor={`cat-${category.id}`} className="font-normal">{category.name}</Label>
+                                </div>
+                            )) : (
+                                <p className="text-sm text-muted-foreground">Нет активных категорий для выбора.</p>
+                            )}
                         </div>
-                    )) : (
-                        <p className="text-sm text-muted-foreground">Нет активных категорий для выбора.</p>
-                    )}
+                    </div>
+                    <div>
+                         <Label htmlFor="specific-products" className="text-sm font-medium flex items-center">
+                            <PackageIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                            По конкретным товарам:
+                        </Label>
+                        <Textarea
+                            id="specific-products"
+                            placeholder="Названия или ID товаров, через запятую..."
+                            value={specificProducts}
+                            onChange={(e) => setSpecificProducts(e.target.value)}
+                            rows={2}
+                            className="mt-1 shadow-sm"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Укажите, если AI должен учесть интерес к конкретным товарам.</p>
+                    </div>
                 </CardContent>
             </Card>
             
@@ -371,7 +424,7 @@ export function BroadcastsClient() {
                 {buttonText()}
             </Button>
              <p className="text-xs text-muted-foreground text-center">
-                Управление списком запланированных и регулярных рассылок (редактирование, удаление) будет добавлено в следующих версиях.
+                Управление списком запланированных и регулярных рассылок будет добавлено в следующих версиях.
             </p>
         </div>
       </div>
@@ -379,3 +432,4 @@ export function BroadcastsClient() {
   );
 }
 
+    

@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -22,9 +23,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 // Mock Data
 const mockProducts: Product[] = [
-  { id: "prod_1", code: "SUB001", name: "Базовая подписка", description: "Ежемесячный доступ к базовым функциям.", price: 999.00, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png?text=Basic" },
-  { id: "prod_2", code: "SUB002", name: "Премиум подписка", description: "Ежемесячный доступ ко всем функциям.", price: 1999.00, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png?text=Premium" },
-  { id: "prod_3", code: "ADDON001", name: "Дополнительное хранилище", description: "10GB дополнительного хранилища.", price: 500.00, category_id: "cat_2", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png?text=Storage" },
+  { id: "prod_1", code: "SUB001", name: "Базовая подписка", description: "Ежемесячный доступ к базовым функциям.", price: 999.00, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png" , "data-ai-hint": "subscription" },
+  { id: "prod_2", code: "SUB002", name: "Премиум подписка", description: "Ежемесячный доступ ко всем функциям.", price: 1999.00, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "subscription" },
+  { id: "prod_3", code: "ADDON001", name: "Дополнительное хранилище", description: "10GB дополнительного хранилища.", price: 500.00, category_id: "cat_2", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "storage" },
 ];
 
 export function ProductsClient() {
@@ -36,7 +37,7 @@ export function ProductsClient() {
   const columns = React.useMemo(() => [
     { accessorKey: "name", header: "Название", cell: (row: Product) => (
       <div className="flex items-center gap-2">
-        {row.image && <img src={row.image} alt={row.name} data-ai-hint="product item" className="h-10 w-10 rounded-md object-cover" />}
+        {row.image && <img src={row.image} alt={row.name} data-ai-hint={row["data-ai-hint"] || "product item"} className="h-10 w-10 rounded-md object-cover" />}
         <span>{row.name}</span>
       </div>
     )},
@@ -68,7 +69,8 @@ export function ProductsClient() {
   };
   
   const handleSaveProduct = (formData: FormData) => {
-    const newProductData = {
+    const imageUrl = formData.get('image_url') as string;
+    const newProductData: Product = {
       id: editingProduct?.id || `prod_${Date.now()}`,
       code: formData.get('code') as string,
       name: formData.get('name') as string,
@@ -77,7 +79,8 @@ export function ProductsClient() {
       category_id: formData.get('category_id') as string,
       active: formData.get('active') === 'on',
       created_at: editingProduct?.created_at || new Date().toISOString(),
-      image: editingProduct?.image || "https://placehold.co/100x100.png?text=New"
+      image: imageUrl || editingProduct?.image || "https://placehold.co/100x100.png",
+      "data-ai-hint": formData.get('data-ai-hint') as string || "product item"
     };
 
     if (editingProduct) {
@@ -136,6 +139,14 @@ export function ProductsClient() {
                 <Label htmlFor="category_id" className="text-right">ID Категории</Label>
                 <Input id="category_id" name="category_id" defaultValue={editingProduct?.category_id} className="col-span-3" required />
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="image_url" className="text-right">URL изображения</Label>
+                <Input id="image_url" name="image_url" defaultValue={editingProduct?.image} className="col-span-3" placeholder="https://placehold.co/100x100.png" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="data-ai-hint" className="text-right">Подсказка для ИИ</Label>
+                <Input id="data-ai-hint" name="data-ai-hint" defaultValue={editingProduct?.["data-ai-hint"]} className="col-span-3" placeholder="Ключевые слова (макс 2)" />
+              </div>
                <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="active" className="text-right">Активен</Label>
                 <div className="col-span-3">
@@ -153,3 +164,5 @@ export function ProductsClient() {
     </>
   );
 }
+
+    

@@ -22,6 +22,7 @@ export interface Product {
   active: boolean;
   created_at: string; // ISO datetime string
   image?: string; // URL to image
+  "data-ai-hint"?: string; // For Unsplash keyword search, max 2 words
 }
 
 export interface Category {
@@ -30,6 +31,7 @@ export interface Category {
   name: string;
   description?: string;
   image?: string; // URL to image
+  "data-ai-hint"?: string; // For Unsplash keyword search, max 2 words
   active: boolean;
   created_at: string; // ISO datetime string
   parent_id?: string; // For hierarchy
@@ -149,3 +151,5 @@ export interface SubscriptionWithDetails extends Subscription {
   user_username?: string;
   product_name?: string;
 }
+
+    

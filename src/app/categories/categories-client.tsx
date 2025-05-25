@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -22,9 +23,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 // Mock Data
 const mockCategories: Category[] = [
-  { id: "cat_1", code: "SUBS", name: "Подписки", description: "Основные подписки на товары.", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png?text=Subs" },
-  { id: "cat_2", code: "ADDONS", name: "Дополнения", description: "Дополнительные услуги и функции.", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png?text=Addons" },
-  { id: "cat_3", code: "LEGACY", name: "Архивные товары", description: "Старые, неподдерживаемые товары.", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png?text=Legacy" },
+  { id: "cat_1", code: "SUBS", name: "Подписки", description: "Основные подписки на товары.", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "subscriptions services" },
+  { id: "cat_2", code: "ADDONS", name: "Дополнения", description: "Дополнительные услуги и функции.", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "addons features" },
+  { id: "cat_3", code: "LEGACY", name: "Архивные товары", description: "Старые, неподдерживаемые товары.", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "archive old" },
 ];
 
 export function CategoriesClient() {
@@ -36,7 +37,7 @@ export function CategoriesClient() {
   const columns = React.useMemo(() => [
     { accessorKey: "name", header: "Название", cell: (row: Category) => (
       <div className="flex items-center gap-2">
-        {row.image && <img src={row.image} alt={row.name} data-ai-hint="category item" className="h-10 w-10 rounded-md object-cover" />}
+        {row.image && <img src={row.image} alt={row.name} data-ai-hint={row["data-ai-hint"] || "category item"} className="h-10 w-10 rounded-md object-cover" />}
         <span>{row.name}</span>
       </div>
     )},
@@ -67,14 +68,16 @@ export function CategoriesClient() {
   };
   
   const handleSaveCategory = (formData: FormData) => {
-    const newCategoryData = {
+    const imageUrl = formData.get('image_url') as string;
+    const newCategoryData: Category = {
       id: editingCategory?.id || `cat_${Date.now()}`,
       code: formData.get('code') as string,
       name: formData.get('name') as string,
       description: formData.get('description') as string,
       active: formData.get('active') === 'on',
       created_at: editingCategory?.created_at || new Date().toISOString(),
-      image: editingCategory?.image || "https://placehold.co/100x100.png?text=New"
+      image: imageUrl || editingCategory?.image || "https://placehold.co/100x100.png",
+      "data-ai-hint": formData.get('data-ai-hint') as string || "category item"
     };
 
     if (editingCategory) {
@@ -124,6 +127,14 @@ export function CategoriesClient() {
                 <Label htmlFor="description" className="text-right">Описание</Label>
                 <Textarea id="description" name="description" defaultValue={editingCategory?.description} className="col-span-3" />
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="image_url" className="text-right">URL изображения</Label>
+                <Input id="image_url" name="image_url" defaultValue={editingCategory?.image} className="col-span-3" placeholder="https://placehold.co/100x100.png"/>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="data-ai-hint" className="text-right">Подсказка для ИИ</Label>
+                <Input id="data-ai-hint" name="data-ai-hint" defaultValue={editingCategory?.["data-ai-hint"]} className="col-span-3" placeholder="Ключевые слова (макс 2)" />
+              </div>
                <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="active" className="text-right">Активна</Label>
                  <div className="col-span-3">
@@ -141,3 +152,5 @@ export function CategoriesClient() {
     </>
   );
 }
+
+    

@@ -2,13 +2,18 @@
 "use client";
 
 import Link from 'next/link';
-import { DollarSign, Users, ShoppingCart, PlusCircle, Send, MessageSquare } from 'lucide-react';
+import { DollarSign, Users, ShoppingCart, PlusCircle, Send, MessageSquare, Brain, BarChart3, Loader2 } from 'lucide-react';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import { PlaceholderChart } from '@/components/dashboard/placeholder-chart';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { ChartConfig } from "@/components/ui/chart";
 import { useState, useEffect } from 'react';
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { analyzeSales, type SalesAnalysisInput } from "@/ai/flows/sales-analysis-flow";
+
 
 // Helper function to generate data for charts to avoid hydration issues with Math.random
 const generateChartData = (length: number, valueGenerator: () => number, keyName: string, labelPrefix: string = "") => {
@@ -37,6 +42,11 @@ const usersChartConfig = {
 export default function DashboardPage() {
   const [salesData, setSalesData] = useState<any[]>([]);
   const [usersData, setUsersData] = useState<any[]>([]);
+  const { toast } = useToast();
+
+  const [aiSalesQuery, setAiSalesQuery] = useState<string>("");
+  const [aiSalesReport, setAiSalesReport] = useState<string | null>(null);
+  const [isAnalyzingSales, setIsAnalyzingSales] = useState<boolean>(false);
 
   useEffect(() => {
     setSalesData(generateChartData(6, () => Math.floor(Math.random() * 500000) + 100000, "sales"));
@@ -45,6 +55,39 @@ export default function DashboardPage() {
 
   const formatCurrency = (value: number) => `${value.toLocaleString()} ₽`;
   const formatNumber = (value: number) => value.toLocaleString();
+
+  const handleAiSalesAnalysis = async () => {
+    if (!aiSalesQuery.trim()) {
+      toast({
+        title: "Запрос пуст",
+        description: "Пожалуйста, введите ваш запрос для AI-аналитика.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsAnalyzingSales(true);
+    setAiSalesReport(null);
+    try {
+      const input: SalesAnalysisInput = { userQuery: aiSalesQuery };
+      const result = await analyzeSales(input);
+      setAiSalesReport(result.report);
+      toast({
+        title: "Анализ готов",
+        description: "AI-аналитик подготовил для вас отчет.",
+      });
+    } catch (error) {
+      console.error("Ошибка AI-анализа продаж:", error);
+      toast({
+        title: "Ошибка AI-анализа",
+        description: "Не удалось получить анализ от AI. Попробуйте еще раз.",
+        variant: "destructive",
+      });
+      setAiSalesReport("Произошла ошибка при генерации отчета.");
+    } finally {
+      setIsAnalyzingSales(false);
+    }
+  };
+
 
   if (!salesData.length || !usersData.length) {
     // You can return a loading spinner or skeleton here
@@ -89,6 +132,58 @@ export default function DashboardPage() {
         />
       </div>
       
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Brain className="mr-2 h-6 w-6 text-primary" />
+            Анализ продаж с помощью AI
+          </CardTitle>
+          <CardDescription>
+            Задайте вопрос нашему AI-аналитику о продажах, трендах или запросите рекомендации.
+            Например: "Какие категории товаров принесли наибольший доход в прошлом квартале?" или "Посоветуй, на какие товары сделать акцию в следующем месяце."
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="ai-sales-query">Ваш запрос к AI-аналитику:</Label>
+            <Textarea
+              id="ai-sales-query"
+              placeholder="Введите ваш вопрос или задачу для анализа..."
+              value={aiSalesQuery}
+              onChange={(e) => setAiSalesQuery(e.target.value)}
+              rows={3}
+              className="mt-1 shadow-sm"
+            />
+          </div>
+          <Button onClick={handleAiSalesAnalysis} disabled={isAnalyzingSales || !aiSalesQuery.trim()}>
+            {isAnalyzingSales ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <BarChart3 className="mr-2 h-4 w-4" />
+            )}
+            Получить анализ от AI
+          </Button>
+          {isAnalyzingSales && (
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Анализирую данные... Это может занять некоторое время.</span>
+            </div>
+          )}
+          {aiSalesReport && !isAnalyzingSales && (
+            <Card className="mt-4 bg-muted/50">
+              <CardHeader>
+                <CardTitle className="text-lg">Отчет AI-аналитика</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-sm max-w-none whitespace-pre-wrap">
+                  {aiSalesReport}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </CardContent>
+      </Card>
+
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Быстрые действия</CardTitle>

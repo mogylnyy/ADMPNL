@@ -13,7 +13,7 @@ import {z} from 'genkit';
 
 const GenerateBroadcastMessageInputSchema = z.object({
   instructions: z.string().describe('Инструкции от пользователя для содержания рассылки (например, "анонсируй новый продукт X", "распродажа подписок").'),
-  // targetAudienceDescription: z.string().optional().describe('Опционально: Описание целевой аудитории (например, "пользователи с премиум подпиской", "новые пользователи в этом месяце"). ИИ адаптирует сообщение, если предоставлено.'),
+  targetAudienceDescription: z.string().optional().describe('Опционально: Описание целевой аудитории (например, "пользователи с премиум подпиской", "новые пользователи в этом месяце", "пользователи, покупавшие товары из категорий: Категория1, Категория2"). ИИ адаптирует сообщение, если предоставлено.'),
 });
 export type GenerateBroadcastMessageInput = z.infer<typeof GenerateBroadcastMessageInputSchema>;
 
@@ -63,3 +63,4 @@ const generateBroadcastMessageFlow = ai.defineFlow(
     return output;
   }
 );
+

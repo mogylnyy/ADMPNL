@@ -11,9 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { generateBroadcastMessage, type GenerateBroadcastMessageInput } from "@/ai/flows/generate-broadcast-flow";
-import { Bot, Send, Sparkles, Loader2, CalendarIcon, Filter, Clock } from "lucide-react";
+import { Bot, Send, Sparkles, Loader2, CalendarIcon, Filter, Clock, Repeat } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from 'date-fns/locale';
 import type { Category } from "@/types";
@@ -26,6 +27,9 @@ const mockCategories: Category[] = [
   { id: "cat_4", code: "LEGACY", name: "Архивные товары", description: "Старые, неподдерживаемые товары.", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "archive old" },
 ];
 
+const daysOfWeekMap: Record<number, string> = {
+  0: 'Воскресенье', 1: 'Понедельник', 2: 'Вторник', 3: 'Среду', 4: 'Четверг', 5: 'Пятницу', 6: 'Субботу'
+};
 
 export function BroadcastsClient() {
   const [instructions, setInstructions] = React.useState("");
@@ -37,6 +41,8 @@ export function BroadcastsClient() {
   const [isScheduled, setIsScheduled] = React.useState(false);
   const [scheduleDate, setScheduleDate] = React.useState<Date | undefined>(undefined);
   const [scheduleTime, setScheduleTime] = React.useState<string>("10:00");
+  const [scheduleType, setScheduleType] = React.useState<'once' | 'weekly' | 'monthly'>('once');
+  
   const [selectedCategories, setSelectedCategories] = React.useState<string[]>([]);
 
   const activeCategories = React.useMemo(() => mockCategories.filter(c => c.active), []);
@@ -87,6 +93,32 @@ export function BroadcastsClient() {
     }
   };
 
+  const getFullScheduledDateTime = (): Date | null => {
+    if (!scheduleDate || !scheduleTime) return null;
+    const dateTime = new Date(scheduleDate);
+    const [hours, minutes] = scheduleTime.split(':').map(Number);
+    dateTime.setHours(hours, minutes);
+    dateTime.setSeconds(0, 0); // Ensure seconds and milliseconds are zero
+    return dateTime;
+  };
+  
+  const getScheduleDescription = () => {
+    const fullDate = getFullScheduledDateTime();
+    if (!isScheduled || !fullDate) return "Немедленная отправка";
+
+    switch (scheduleType) {
+      case 'weekly':
+        const dayOfWeek = daysOfWeekMap[fullDate.getDay()];
+        return `Каждую ${dayOfWeek.toLowerCase()} в ${scheduleTime}`;
+      case 'monthly':
+        return `${fullDate.getDate()} числа каждого месяца в ${scheduleTime}`;
+      case 'once':
+      default:
+        return `Однократно: ${format(fullDate, "PPP", { locale: ru })} в ${scheduleTime}`;
+    }
+  };
+
+
   const handleSendMessage = async () => {
     const messageToSend = generatedMessage.trim() || instructions.trim();
     if (!messageToSend) {
@@ -98,7 +130,8 @@ export function BroadcastsClient() {
         return;
     }
     
-    if (isScheduled && (!scheduleDate || !scheduleTime)) {
+    const fullScheduledDateTime = getFullScheduledDateTime();
+    if (isScheduled && (!fullScheduledDateTime)) {
       toast({
         title: "Дата или время не указаны",
         description: "Пожалуйста, укажите дату и время для запланированной рассылки.",
@@ -113,13 +146,14 @@ export function BroadcastsClient() {
         message: messageToSend,
         targetCategories: selectedCategories.length > 0 ? selectedCategories.map(id => mockCategories.find(c=>c.id === id)?.name || id) : "Все пользователи",
         scheduled: isScheduled,
+        scheduleType: isScheduled ? scheduleType : 'immediate',
+        scheduleDescription: getScheduleDescription(),
     };
 
-    if (isScheduled && scheduleDate) {
-        const dateTime = new Date(scheduleDate);
-        const [hours, minutes] = scheduleTime.split(':').map(Number);
-        dateTime.setHours(hours, minutes);
-        logData.scheduledAt = dateTime.toLocaleString('ru-RU');
+    if (isScheduled && fullScheduledDateTime) {
+        logData.scheduledAt = fullScheduledDateTime.toLocaleString('ru-RU', { dateStyle: 'full', timeStyle: 'short' });
+    } else {
+        logData.scheduledAt = "Немедленно";
     }
 
     console.log("Данные рассылки (имитация):", logData);
@@ -127,17 +161,41 @@ export function BroadcastsClient() {
     await new Promise(resolve => setTimeout(resolve, 1500)); 
 
     setIsSending(false);
+    let toastTitle = "Рассылка отправлена (имитация)";
+    if (isScheduled) {
+        switch (scheduleType) {
+            case 'weekly':
+            case 'monthly':
+                toastTitle = "Регулярная рассылка запланирована (имитация)";
+                break;
+            case 'once':
+                toastTitle = "Рассылка запланирована (имитация)";
+                break;
+        }
+    }
     toast({
-      title: isScheduled ? "Рассылка запланирована (имитация)" : "Рассылка отправлена (имитация)",
-      description: `Ваше сообщение было '${isScheduled ? 'запланировано' : 'отправлено'}'`,
+      title: toastTitle,
+      description: `Ваше сообщение было '${isScheduled ? 'запланировано' : 'отправлено'}'. ${getScheduleDescription()}`,
     });
+  };
+  
+  const buttonText = () => {
+    if (!isScheduled) return "Отправить рассылку";
+    switch (scheduleType) {
+      case 'weekly':
+      case 'monthly':
+        return "Запланировать регулярную рассылку";
+      case 'once':
+      default:
+        return "Запланировать рассылку";
+    }
   };
 
   return (
     <>
       <PageHeader
         title="Создание рассылки"
-        description="Подготовьте и отправьте сообщения вашим пользователям через Telegram-бота."
+        description="Подготовьте и отправьте сообщения вашим пользователям через Telegram-бота. Вы можете настроить немедленную, однократную или регулярную отправку."
       />
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -148,7 +206,7 @@ export function BroadcastsClient() {
                 Умная рассылка с AI
                 </CardTitle>
                 <CardDescription>
-                Опишите, о чем должна быть рассылка, и AI поможет составить текст.
+                Опишите, о чем должна быть рассылка (например, анонс, акция, конкретные товары), и AI поможет составить текст.
                 Затем вы сможете его отредактировать и отправить.
                 </CardDescription>
             </CardHeader>
@@ -206,13 +264,16 @@ export function BroadcastsClient() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center space-x-2">
-                        <Checkbox id="schedule-send" checked={isScheduled} onCheckedChange={(checked) => setIsScheduled(!!checked)} />
+                        <Checkbox id="schedule-send" checked={isScheduled} onCheckedChange={(checked) => {
+                            setIsScheduled(!!checked);
+                            if (!checked) setScheduleType('once'); // Reset to once if unscheduled
+                        }} />
                         <Label htmlFor="schedule-send">Запланировать отправку</Label>
                     </div>
                     {isScheduled && (
                         <div className="space-y-4 pl-6 border-l-2 border-muted ml-2 pt-2">
                             <div>
-                                <Label htmlFor="schedule-date">Дата отправки</Label>
+                                <Label htmlFor="schedule-date">Дата и время первоначальной отправки</Label>
                                 <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
@@ -230,19 +291,43 @@ export function BroadcastsClient() {
                                     onSelect={setScheduleDate}
                                     initialFocus
                                     locale={ru}
+                                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} // Disable past dates
                                     />
                                 </PopoverContent>
                                 </Popover>
-                            </div>
-                            <div>
-                                <Label htmlFor="schedule-time">Время отправки</Label>
                                 <Input 
                                     id="schedule-time" 
                                     type="time" 
                                     value={scheduleTime} 
                                     onChange={(e) => setScheduleTime(e.target.value)}
-                                    className="mt-1"
+                                    className="mt-2"
                                 />
+                            </div>
+                            
+                            <div>
+                                <Label className="flex items-center mb-2">
+                                    <Repeat className="mr-2 h-4 w-4 text-primary" />
+                                    Тип повторения
+                                </Label>
+                                <RadioGroup value={scheduleType} onValueChange={(value) => setScheduleType(value as typeof scheduleType)} className="space-y-1">
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="once" id="r-once" />
+                                        <Label htmlFor="r-once" className="font-normal">Однократно</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="weekly" id="r-weekly" />
+                                        <Label htmlFor="r-weekly" className="font-normal">Еженедельно</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="monthly" id="r-monthly" />
+                                        <Label htmlFor="r-monthly" className="font-normal">Ежемесячно</Label>
+                                    </div>
+                                </RadioGroup>
+                                {scheduleDate && (
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        {getScheduleDescription()}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     )}
@@ -283,10 +368,14 @@ export function BroadcastsClient() {
                 ) : (
                     <Send className="mr-2 h-4 w-4" />
                 )}
-                {isScheduled ? "Запланировать рассылку" : "Отправить рассылку"}
+                {buttonText()}
             </Button>
+             <p className="text-xs text-muted-foreground text-center">
+                Управление списком запланированных и регулярных рассылок (редактирование, удаление) будет добавлено в следующих версиях.
+            </p>
         </div>
       </div>
     </>
   );
 }
+

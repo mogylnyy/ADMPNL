@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tgId      String   @unique
+  firstName String?
+  username  String?
+  balance   Float    @default(0)
+  createdAt DateTime @default(now())
+  orders    orders[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model orders {
+  id                Int            @id @default(autoincrement())
+  user_id           String?
+  product_id        Int?
+  status            String         @db.VarChar(32)
+  amount            Decimal        @db.Decimal(10, 2)
+  payment_gateway   String?        @db.VarChar(32)
+  external_order_id String?        @db.VarChar(128)
+  created_at        DateTime?      @default(now()) @db.Timestamp(6)
+  paid_at           DateTime?      @db.Timestamp(6)
+  delivery_payload  String?
+  products          products?      @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user              User?          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  proxy_orders      proxy_orders[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model products {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(64)
+  name        String    @db.VarChar(100)
+  description String?
+  price       Decimal   @db.Decimal(10, 2)
+  category_id Int?
+  category    categories? @relation(fields: [category_id], references: [id], name: "CategoryProducts")
+  active      Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  image       String?   @db.VarChar(255)
+  orders      orders[]
+  post_payment_action String? @db.VarChar(32)
+}
+
+model proxy_orders {
+  id           Int       @id @default(autoincrement())
+  order_id     Int?
+  proxy_id_api String?   @db.VarChar(32)
+  host         String?   @db.VarChar(64)
+  port         String?   @db.VarChar(16)
+  user_login   String?   @db.VarChar(64)
+  user_pass    String?   @db.VarChar(64)
+  protocol     String?   @db.VarChar(16)
+  country      String?   @db.VarChar(4)
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+  expires_at   DateTime? @db.Timestamp(6)
+  orders       orders?   @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model categories {
+  id          Int        @id @default(autoincrement())
+  code        String     @unique @db.VarChar(64)
+  name        String     @db.VarChar(100)
+  description String?
+  image       String?
+  active      Boolean?   @default(true)
+  created_at  DateTime?  @default(now()) @db.Timestamp(6)
+  products    products[] @relation("CategoryProducts")
+}
+
+model users {
+  id          Int        @id @default(autoincrement())
+  telegram_id BigInt     @unique
+  username    String?    @db.VarChar(64)
+  first_name  String?    @db.VarChar(64)
+  last_name   String?    @db.VarChar(64)
+  created_at  DateTime?  @default(now()) @db.Timestamp(6)
+  balance     Float      @default(0)
+}

@@ -1,7 +1,9 @@
+
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { APP_NAME } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { UserCircle } from "lucide-react";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 
 export function Header() {
   return (
@@ -13,8 +15,8 @@ export function Header() {
         </div>
         {/* Placeholder for User Menu / Theme Toggle */}
         <div className="flex items-center gap-4">
-          {/* <ThemeToggle /> */}
-          <Button variant="ghost" size="icon">
+          <ThemeToggle />
+          <Button variant="ghost" size="icon" aria-label="Профиль пользователя">
             <UserCircle className="h-6 w-6" />
             <span className="sr-only">Профиль пользователя</span>
           </Button>

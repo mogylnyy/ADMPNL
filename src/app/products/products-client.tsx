@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import type { Product, Category } from "@/types";
+import type { Product, Category, PostPaymentAction } from "@/types";
 import { DataTable } from "@/components/shared/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,20 +39,26 @@ const mockCategories: Category[] = [
 
 // Mock Data for Products
 const mockProducts: Product[] = [
-  { id: "prod_1", code: "SUB001", name: "Базовая подписка", description: "Ежемесячный доступ к базовым функциям.", price: 999.00, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png" , "data-ai-hint": "subscription" },
-  { id: "prod_2", code: "SUB002", name: "Премиум подписка", description: "Ежемесячный доступ ко всем функциям.", price: 1999.00, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "subscription" },
-  { id: "prod_3", code: "ADDON001", name: "Дополнительное хранилище", description: "10GB дополнительного хранилища.", price: 500.00, category_id: "cat_2", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "storage" },
-  { id: "prod_4", code: "SUB003", name: "Месячная подписка (Архив)", description: "Старая месячная подписка.", price: 799.00, category_id: "cat_3", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "legacy subscription" },
+  { id: "prod_1", code: "SUB001", name: "Базовая подписка", description: "Ежемесячный доступ к базовым функциям.", price: 999.00, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png" , "data-ai-hint": "subscription", post_payment_action: "auto_fulfillment" },
+  { id: "prod_2", code: "SUB002", name: "Премиум подписка", description: "Ежемесячный доступ ко всем функциям.", price: 1999.00, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "subscription premium", post_payment_action: "chat_with_manager" },
+  { id: "prod_3", code: "ADDON001", name: "Дополнительное хранилище", description: "10GB дополнительного хранилища.", price: 500.00, category_id: "cat_2", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "storage cloud", post_payment_action: "auto_fulfillment" },
+  { id: "prod_4", code: "SUB003", name: "Месячная подписка (Архив)", description: "Старая месячная подписка.", price: 799.00, category_id: "cat_3", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "legacy subscription", post_payment_action: "auto_fulfillment" },
 ];
+
+const postPaymentActionLabels: Record<PostPaymentAction, string> = {
+  auto_fulfillment: "Автовыдача товара",
+  chat_with_manager: "Чат с менеджером",
+};
 
 export function ProductsClient() {
   const [products, setProducts] = React.useState<Product[]>(mockProducts);
-  const [categories] = React.useState<Category[]>(mockCategories); // Categories are static for now
+  const [categories] = React.useState<Category[]>(mockCategories);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
   
   const [pageSelectedCategoryId, setPageSelectedCategoryId] = React.useState<string | null>(null);
   const [modalFormCategoryId, setModalFormCategoryId] = React.useState<string | undefined>(undefined);
+  const [modalFormPostPaymentAction, setModalFormPostPaymentAction] = React.useState<PostPaymentAction | undefined>('auto_fulfillment');
   
   const { toast } = useToast();
 
@@ -79,12 +85,16 @@ export function ProductsClient() {
     )},
     { accessorKey: "code", header: "Код" },
     { accessorKey: "price", header: "Цена", cell: (row: Product) => `${row.price.toFixed(2)} ₽` },
-    // Категория теперь известна из контекста выбранной категории, но оставим для информации если нужно будет показывать все товары
-    // {
-    //   accessorKey: "category_id",
-    //   header: "Категория",
-    //   cell: (row: Product) => categories.find(cat => cat.id === row.category_id)?.name || row.category_id
-    // },
+    {
+      accessorKey: "category_id",
+      header: "Категория",
+      cell: (row: Product) => categories.find(cat => cat.id === row.category_id)?.name || row.category_id
+    },
+    { 
+      accessorKey: "post_payment_action", 
+      header: "Действие после оплаты", 
+      cell: (row: Product) => row.post_payment_action ? postPaymentActionLabels[row.post_payment_action] : "Не указано"
+    },
     { accessorKey: "active", header: "Активен", cell: (row: Product) => (
       <Badge variant={row.active ? "default" : "secondary"} className={row.active ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
         {row.active ? <CheckCircle className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
@@ -100,13 +110,15 @@ export function ProductsClient() {
       return;
     }
     setEditingProduct(null);
-    setModalFormCategoryId(pageSelectedCategoryId); // Pre-fill category from page context
+    setModalFormCategoryId(pageSelectedCategoryId);
+    setModalFormPostPaymentAction('auto_fulfillment'); // Default action
     setIsModalOpen(true);
   };
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
     setModalFormCategoryId(product.category_id);
+    setModalFormPostPaymentAction(product.post_payment_action || 'auto_fulfillment');
     setIsModalOpen(true);
   };
 
@@ -118,10 +130,10 @@ export function ProductsClient() {
   const handleSaveProduct = (formData: FormData) => {
     const imageUrl = formData.get('image_url') as string;
 
-    if (!modalFormCategoryId) { // This check should ideally not be needed if modalFormCategoryId is always set
+    if (!modalFormCategoryId) {
       toast({
         title: "Ошибка",
-        description: "Категория не выбрана в форме.", // Should be pre-filled
+        description: "Категория не выбрана в форме.",
         variant: "destructive",
       });
       return;
@@ -133,11 +145,12 @@ export function ProductsClient() {
       name: formData.get('name') as string,
       description: formData.get('description') as string,
       price: parseFloat(formData.get('price') as string),
-      category_id: modalFormCategoryId, // Use category from modal form state
+      category_id: modalFormCategoryId,
       active: formData.get('active') === 'on',
       created_at: editingProduct?.created_at || new Date().toISOString(),
-      image: imageUrl || editingProduct?.image || "https://placehold.co/100x100.png",
-      "data-ai-hint": formData.get('data-ai-hint') as string || "product item"
+      image: imageUrl || editingProduct?.image || `https://placehold.co/100x100.png?text=${encodeURIComponent(formData.get('name') as string || 'Товар')}`,
+      "data-ai-hint": formData.get('data-ai-hint') as string || "product item",
+      post_payment_action: modalFormPostPaymentAction,
     };
 
     if (editingProduct) {
@@ -149,7 +162,8 @@ export function ProductsClient() {
     }
     setIsModalOpen(false);
     setEditingProduct(null);
-    setModalFormCategoryId(undefined); // Reset modal category state
+    setModalFormCategoryId(undefined);
+    setModalFormPostPaymentAction('auto_fulfillment');
   };
 
 
@@ -194,7 +208,6 @@ export function ProductsClient() {
           onEdit={handleEdit}
           onDelete={handleDelete} 
           entityName="Товар"
-          // onAddNew и addNewButtonText убраны, так как кнопка "Добавить" находится в PageHeader
         />
       ) : (
         <Alert className="mt-4 border-blue-300 bg-blue-50 text-blue-700 [&>svg]:text-blue-700">
@@ -210,7 +223,8 @@ export function ProductsClient() {
         setIsModalOpen(isOpen);
         if (!isOpen) {
           setEditingProduct(null);
-          setModalFormCategoryId(undefined); // Reset on close
+          setModalFormCategoryId(undefined);
+          setModalFormPostPaymentAction('auto_fulfillment');
         }
       }}>
         <DialogContent className="sm:max-w-[425px]">
@@ -218,7 +232,7 @@ export function ProductsClient() {
             <DialogHeader>
               <DialogTitle>{editingProduct ? "Редактировать товар" : "Добавить новый товар"}</DialogTitle>
               <DialogDescription>
-                {editingProduct ? "Измените данные этого товара." : `Введите данные для нового товара в категории "${selectedCategoryName}".`}
+                {editingProduct ? "Измените данные этого товара." : `Введите данные для нового товара в категории "${categories.find(c=>c.id === modalFormCategoryId)?.name || ''}".`}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -241,16 +255,13 @@ export function ProductsClient() {
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="category_id_modal_select" className="text-right">Категория</Label>
                 <Select
-                  value={modalFormCategoryId} // Use state for modal's category select
+                  value={modalFormCategoryId}
                   onValueChange={setModalFormCategoryId}
-                  // If adding new product, this will be pre-filled by pageSelectedCategoryId
-                  // For simplicity, we allow changing category here. It could be disabled for new products.
                 >
                   <SelectTrigger id="category_id_modal_select" className="col-span-3">
                     <SelectValue placeholder="Выберите категорию" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* Show all active categories in modal, pre-select based on context */}
                     {activeCategoriesForSelect.length > 0 ? (
                       activeCategoriesForSelect.map((category) => (
                         <SelectItem key={category.id} value={category.id}>
@@ -260,6 +271,21 @@ export function ProductsClient() {
                     ) : (
                       <SelectItem value="no-active-categories-modal" disabled>Нет активных категорий</SelectItem>
                     )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="post_payment_action" className="text-right">Действие после оплаты</Label>
+                <Select
+                  value={modalFormPostPaymentAction}
+                  onValueChange={(value) => setModalFormPostPaymentAction(value as PostPaymentAction)}
+                >
+                  <SelectTrigger id="post_payment_action" className="col-span-3">
+                    <SelectValue placeholder="Выберите действие" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto_fulfillment">{postPaymentActionLabels.auto_fulfillment}</SelectItem>
+                    <SelectItem value="chat_with_manager">{postPaymentActionLabels.chat_with_manager}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -282,7 +308,8 @@ export function ProductsClient() {
               <Button type="button" variant="outline" onClick={() => {
                  setIsModalOpen(false);
                  setEditingProduct(null);
-                 setModalFormCategoryId(undefined); // Reset on cancel
+                 setModalFormCategoryId(undefined);
+                 setModalFormPostPaymentAction('auto_fulfillment');
               }}>Отмена</Button>
               <Button type="submit">Сохранить товар</Button>
             </DialogFooter>

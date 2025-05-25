@@ -12,6 +12,8 @@ export interface User {
   balance: number; // Simplified for frontend, join from balances table
 }
 
+export type PostPaymentAction = 'auto_fulfillment' | 'chat_with_manager';
+
 export interface Product {
   id: string;
   code: string;
@@ -23,6 +25,7 @@ export interface Product {
   created_at: string; // ISO datetime string
   image?: string; // URL to image
   "data-ai-hint"?: string; // For Unsplash keyword search, max 2 words
+  post_payment_action?: PostPaymentAction;
 }
 
 export interface Category {
@@ -35,6 +38,7 @@ export interface Category {
   active: boolean;
   created_at: string; // ISO datetime string
   parent_id?: string; // For hierarchy
+  _depth?: number; // Internal for tree rendering
 }
 
 export type OrderStatus = 'pending' | 'paid' | 'processing' | 'completed' | 'cancelled' | 'refunded';

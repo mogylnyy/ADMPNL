@@ -1,5 +1,7 @@
+
 "use client";
 
+import Link from 'next/link';
 import { DollarSign, Users, ShoppingCart, PlusCircle, Send, MessageSquare } from 'lucide-react';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import { PlaceholderChart } from '@/components/dashboard/placeholder-chart';
@@ -92,8 +94,10 @@ export default function DashboardPage() {
           <CardTitle>Быстрые действия</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          <Button variant="default" size="lg">
-            <PlusCircle className="mr-2 h-5 w-5" /> Добавить новый товар
+          <Button variant="default" size="lg" asChild>
+            <Link href="/products">
+              <PlusCircle className="mr-2 h-5 w-5" /> Добавить новый товар
+            </Link>
           </Button>
           <Button variant="outline" size="lg">
             <Send className="mr-2 h-5 w-5" /> Создать рассылку
@@ -106,3 +110,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

@@ -11,9 +11,10 @@ interface PlaceholderChartProps {
   dataKey: string;
   xAxisKey: string;
   config: ChartConfig;
+  valueFormatter?: (value: number) => string;
 }
 
-export function PlaceholderChart({ title, description, data, dataKey, xAxisKey, config }: PlaceholderChartProps) {
+export function PlaceholderChart({ title, description, data, dataKey, xAxisKey, config, valueFormatter }: PlaceholderChartProps) {
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -26,9 +27,12 @@ export function PlaceholderChart({ title, description, data, dataKey, xAxisKey, 
             <BarChart data={data} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey={xAxisKey} tickLine={false} axisLine={false} tickMargin={8} />
-              <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-              <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<ChartTooltipContent />} />
-              <Bar dataKey={dataKey} fill="var(--color-main)" radius={4} />
+              <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={valueFormatter} />
+              <Tooltip 
+                cursor={{ fill: 'hsl(var(--muted))' }} 
+                content={<ChartTooltipContent formatter={valueFormatter} />} 
+              />
+              <Bar dataKey={dataKey} fill={`var(--color-${dataKey})`} radius={4} />
             </BarChart>
           </ResponsiveContainer>
         </ChartContainer>

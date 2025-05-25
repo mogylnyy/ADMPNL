@@ -19,8 +19,8 @@ import { Label } from "@/components/ui/label";
 
 // Mock Data
 const mockUsers: User[] = [
-  { id: "user_1", telegram_id: 123456, username: "john_doe", first_name: "John", last_name: "Doe", created_at: new Date(Date.now() - 1000*60*60*24*10).toISOString(), balance: 50.00 },
-  { id: "user_2", telegram_id: 789012, username: "jane_smith", first_name: "Jane", last_name: "Smith", created_at: new Date(Date.now() - 1000*60*60*24*5).toISOString(), balance: 15.75 },
+  { id: "user_1", telegram_id: 123456, username: "john_doe", first_name: "John", last_name: "Doe", created_at: new Date(Date.now() - 1000*60*60*24*10).toISOString(), balance: 5000.00 },
+  { id: "user_2", telegram_id: 789012, username: "jane_smith", first_name: "Jane", last_name: "Smith", created_at: new Date(Date.now() - 1000*60*60*24*5).toISOString(), balance: 1575.50 },
   { id: "user_3", telegram_id: 345678, first_name: "Alice", created_at: new Date().toISOString(), balance: 0.00 },
 ];
 
@@ -43,7 +43,7 @@ export function UsersClient() {
     { accessorKey: "telegram_id", header: "Telegram ID" },
     { accessorKey: "username", header: "Имя пользователя", cell: (row: User) => row.username || 'Н/Д' },
     { accessorKey: "first_name", header: "Имя", cell: (row: User) => row.first_name || 'Н/Д' },
-    { accessorKey: "balance", header: "Баланс", cell: (row: User) => `$${row.balance.toFixed(2)}` },
+    { accessorKey: "balance", header: "Баланс", cell: (row: User) => `${row.balance.toFixed(2)} ₽` },
     { accessorKey: "ordersCount", header: "Заказы" },
     { accessorKey: "activeSubscriptionsCount", header: "Активные подписки" },
     { accessorKey: "created_at", header: "Дата регистрации", cell: (row: User) => new Date(row.created_at).toLocaleDateString() },
@@ -59,7 +59,7 @@ export function UsersClient() {
     if (editingUser) {
       const updatedUser = { ...editingUser, balance: balanceAdjustment };
       setUsers(prev => prev.map(u => u.id === editingUser.id ? updatedUser : u));
-      toast({ title: "Баланс обновлен", description: `Баланс для ${editingUser.username || editingUser.id} обновлен до $${balanceAdjustment.toFixed(2)}.` });
+      toast({ title: "Баланс обновлен", description: `Баланс для ${editingUser.username || editingUser.id} обновлен до ${balanceAdjustment.toFixed(2)} ₽.` });
       setIsModalOpen(false);
       setEditingUser(null);
     }
@@ -81,7 +81,7 @@ export function UsersClient() {
             <DialogHeader>
               <DialogTitle>Управление балансом для {editingUser.username || editingUser.id}</DialogTitle>
               <DialogDescription>
-                Текущий баланс: ${editingUser.balance.toFixed(2)}. Измените баланс ниже.
+                Текущий баланс: {editingUser.balance.toFixed(2)} ₽. Измените баланс ниже.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">

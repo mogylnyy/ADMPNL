@@ -22,9 +22,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 // Mock Data
 const mockProducts: Product[] = [
-  { id: "prod_1", code: "SUB001", name: "Базовая подписка", description: "Ежемесячный доступ к базовым функциям.", price: 9.99, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png?text=Basic" },
-  { id: "prod_2", code: "SUB002", name: "Премиум подписка", description: "Ежемесячный доступ ко всем функциям.", price: 19.99, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png?text=Premium" },
-  { id: "prod_3", code: "ADDON001", name: "Дополнительное хранилище", description: "10GB дополнительного хранилища.", price: 5.00, category_id: "cat_2", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png?text=Storage" },
+  { id: "prod_1", code: "SUB001", name: "Базовая подписка", description: "Ежемесячный доступ к базовым функциям.", price: 999.00, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png?text=Basic" },
+  { id: "prod_2", code: "SUB002", name: "Премиум подписка", description: "Ежемесячный доступ ко всем функциям.", price: 1999.00, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png?text=Premium" },
+  { id: "prod_3", code: "ADDON001", name: "Дополнительное хранилище", description: "10GB дополнительного хранилища.", price: 500.00, category_id: "cat_2", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png?text=Storage" },
 ];
 
 export function ProductsClient() {
@@ -41,7 +41,7 @@ export function ProductsClient() {
       </div>
     )},
     { accessorKey: "code", header: "Код" },
-    { accessorKey: "price", header: "Цена", cell: (row: Product) => `$${row.price.toFixed(2)}` },
+    { accessorKey: "price", header: "Цена", cell: (row: Product) => `${row.price.toFixed(2)} ₽` },
     { accessorKey: "category_id", header: "ID Категории" }, 
     { accessorKey: "active", header: "Активен", cell: (row: Product) => (
       <Badge variant={row.active ? "default" : "secondary"} className={row.active ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
@@ -129,7 +129,7 @@ export function ProductsClient() {
                 <Textarea id="description" name="description" defaultValue={editingProduct?.description} className="col-span-3" />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="price" className="text-right">Цена</Label>
+                <Label htmlFor="price" className="text-right">Цена (₽)</Label>
                 <Input id="price" name="price" type="number" step="0.01" defaultValue={editingProduct?.price} className="col-span-3" required />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">

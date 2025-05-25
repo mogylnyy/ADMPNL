@@ -11,10 +11,10 @@ import { CheckCircle, Clock, XCircle, Truck } from "lucide-react";
 
 // Mock Data
 const mockOrders: OrderWithDetails[] = [
-  { id: "order_1", user_id: "user_1", user_username: "john_doe", product_id: "prod_1", product_name: "Basic Subscription", status: "paid", amount: 9.99, payment_gateway: "Stripe", created_at: new Date(Date.now() - 1000*60*60*24*2).toISOString(), paid_at: new Date(Date.now() - 1000*60*60*24*2 + 1000*60*5).toISOString() },
-  { id: "order_2", user_id: "user_2", user_username: "jane_smith", product_id: "prod_2", product_name: "Premium Subscription", status: "pending", amount: 19.99, created_at: new Date(Date.now() - 1000*60*60*12).toISOString() },
-  { id: "order_3", user_id: "user_1", user_username: "john_doe", product_id: "prod_2", product_name: "Premium Subscription", status: "completed", amount: 19.99, payment_gateway: "PayPal", created_at: new Date(Date.now() - 1000*60*60*24*5).toISOString(), paid_at: new Date(Date.now() - 1000*60*60*24*5 + 1000*60*2).toISOString() },
-  { id: "order_4", user_id: "user_3", user_username: "Alice", product_id: "prod_1", product_name: "Basic Subscription", status: "cancelled", amount: 9.99, created_at: new Date(Date.now() - 1000*60*60*24*1).toISOString() },
+  { id: "order_1", user_id: "user_1", user_username: "john_doe", product_id: "prod_1", product_name: "Базовая Подписка", status: "paid", amount: 999.00, payment_gateway: "Stripe", created_at: new Date(Date.now() - 1000*60*60*24*2).toISOString(), paid_at: new Date(Date.now() - 1000*60*60*24*2 + 1000*60*5).toISOString() },
+  { id: "order_2", user_id: "user_2", user_username: "jane_smith", product_id: "prod_2", product_name: "Премиум Подписка", status: "pending", amount: 1999.00, created_at: new Date(Date.now() - 1000*60*60*12).toISOString() },
+  { id: "order_3", user_id: "user_1", user_username: "john_doe", product_id: "prod_2", product_name: "Премиум Подписка", status: "completed", amount: 1999.00, payment_gateway: "PayPal", created_at: new Date(Date.now() - 1000*60*60*24*5).toISOString(), paid_at: new Date(Date.now() - 1000*60*60*24*5 + 1000*60*2).toISOString() },
+  { id: "order_4", user_id: "user_3", user_username: "Alice", product_id: "prod_1", product_name: "Базовая Подписка", status: "cancelled", amount: 999.00, created_at: new Date(Date.now() - 1000*60*60*24*1).toISOString() },
 ];
 
 const statusColors: Record<OrderStatus, string> = {
@@ -53,7 +53,7 @@ export function OrdersClient() {
     { accessorKey: "id", header: "ID Заказа" },
     { accessorKey: "user_username", header: "Пользователь", cell: (row: OrderWithDetails) => row.user_username || row.user_id },
     { accessorKey: "product_name", header: "Товар", cell: (row: OrderWithDetails) => row.product_name || row.product_id },
-    { accessorKey: "amount", header: "Сумма", cell: (row: Order) => `$${row.amount.toFixed(2)}` },
+    { accessorKey: "amount", header: "Сумма", cell: (row: Order) => `${row.amount.toFixed(2)} ₽` },
     { accessorKey: "status", header: "Статус", cell: (row: Order) => {
       const Icon = statusIcons[row.status] || Clock;
       const statusText = statusTranslations[row.status] || row.status;

@@ -99,8 +99,10 @@ export default function DashboardPage() {
               <PlusCircle className="mr-2 h-5 w-5" /> Добавить новый товар
             </Link>
           </Button>
-          <Button variant="outline" size="lg">
-            <Send className="mr-2 h-5 w-5" /> Создать рассылку
+          <Button variant="outline" size="lg" asChild>
+            <Link href="/broadcasts">
+              <Send className="mr-2 h-5 w-5" /> Создать рассылку
+            </Link>
           </Button>
           <Button variant="outline" size="lg">
             <MessageSquare className="mr-2 h-5 w-5" /> Просмотреть чаты
@@ -110,4 +112,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

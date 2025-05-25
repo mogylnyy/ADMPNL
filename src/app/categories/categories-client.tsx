@@ -20,12 +20,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Импортируем компоненты вкладок
 
 // Mock Data
 const mockCategories: Category[] = [
   { id: "cat_1", code: "SUBS", name: "Подписки", description: "Основные подписки на товары.", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "subscriptions services" },
   { id: "cat_2", code: "ADDONS", name: "Дополнения", description: "Дополнительные услуги и функции.", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "addons features" },
   { id: "cat_3", code: "LEGACY", name: "Архивные товары", description: "Старые, неподдерживаемые товары.", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "archive old" },
+  { id: "cat_4", code: "SERVICES", name: "Услуги", description: "Разовые услуги.", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "services support" },
+  { id: "cat_5", code: "INACTIVE_TEST", name: "Тестовая неактивная", description: "Категория для тестирования неактивного состояния.", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "test inactive" },
 ];
 
 export function CategoriesClient() {
@@ -33,7 +36,8 @@ export function CategoriesClient() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingCategory, setEditingCategory] = React.useState<Category | null>(null);
   const { toast } = useToast();
-  
+  const [currentTab, setCurrentTab] = React.useState<"active" | "inactive">("active"); // Состояние для текущей вкладки
+
   const columns = React.useMemo(() => [
     { accessorKey: "name", header: "Название", cell: (row: Category) => (
       <div className="flex items-center gap-2">
@@ -91,19 +95,31 @@ export function CategoriesClient() {
     setEditingCategory(null);
   };
 
+  const displayedCategories = React.useMemo(() => {
+    return categories.filter(category => currentTab === "active" ? category.active : !category.active);
+  }, [categories, currentTab]);
+
   return (
     <>
       <PageHeader title="Категории" description="Управление категориями товаров.">
         <Button onClick={handleAddNew}>Добавить категорию</Button>
       </PageHeader>
+
+      <Tabs value={currentTab} onValueChange={(value) => setCurrentTab(value as "active" | "inactive")} className="mb-4">
+        <TabsList>
+          <TabsTrigger value="active">Активные</TabsTrigger>
+          <TabsTrigger value="inactive">Неактивные</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <DataTable
         columns={columns}
-        data={categories}
+        data={displayedCategories} // Используем отфильтрованные данные
         searchKey="name"
         onEdit={handleEdit}
         onDelete={handleDelete}
-        addNewButtonText="Добавить категорию"
         entityName="Категория"
+        // onAddNew и addNewButtonText убраны, так как кнопка "Добавить" находится в PageHeader
       />
        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -152,5 +168,3 @@ export function CategoriesClient() {
     </>
   );
 }
-
-    

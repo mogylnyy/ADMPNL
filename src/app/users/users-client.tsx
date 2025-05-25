@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -16,6 +17,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Filter } from "lucide-react";
 
 // Mock Data
 const mockUsers: User[] = [
@@ -37,6 +47,9 @@ export function UsersClient() {
   const [editingUser, setEditingUser] = React.useState<UserWithDetails | null>(null);
   const [balanceAdjustment, setBalanceAdjustment] = React.useState<number>(0);
   const { toast } = useToast();
+
+  const [filterSubscriptionActivity, setFilterSubscriptionActivity] = React.useState<string>("all");
+  const [filterPurchasedProducts, setFilterPurchasedProducts] = React.useState<string>("");
 
   const columns = React.useMemo(() => [
     { accessorKey: "id", header: "ID" },
@@ -65,12 +78,54 @@ export function UsersClient() {
     }
   };
 
+  // TODO: Implement actual filtering logic based on filterSubscriptionActivity and filterPurchasedProducts
+  const filteredUsers = React.useMemo(() => {
+    return users; // Placeholder - no filtering applied yet
+  }, [users, filterSubscriptionActivity, filterPurchasedProducts]);
+
   return (
     <>
       <PageHeader title="Пользователи" description="Управление пользователями магазина и их данными." />
+
+      <Card className="mb-6 shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Filter className="mr-2 h-5 w-5 text-primary" />
+            Фильтры пользователей
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid md:grid-cols-2 gap-6">
+          <div>
+            <Label htmlFor="filter-subscription-activity" className="text-sm font-medium">Активность подписок</Label>
+            <Select value={filterSubscriptionActivity} onValueChange={setFilterSubscriptionActivity}>
+              <SelectTrigger id="filter-subscription-activity" className="mt-1">
+                <SelectValue placeholder="Выберите активность..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все пользователи</SelectItem>
+                <SelectItem value="purchased_any">Покупали подписки</SelectItem>
+                <SelectItem value="not_purchased_any">Не покупали подписки</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">Фильтр по наличию у пользователя активных или прошлых подписок.</p>
+          </div>
+          <div>
+            <Label htmlFor="filter-purchased-products" className="text-sm font-medium">Купленные товары</Label>
+            <Input
+              id="filter-purchased-products"
+              placeholder="ID или названия товаров, через запятую..."
+              value={filterPurchasedProducts}
+              onChange={(e) => setFilterPurchasedProducts(e.target.value)}
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Укажите конкретные товары, которые должны были быть куплены.</p>
+          </div>
+        </CardContent>
+      </Card>
+
       <DataTable
         columns={columns}
-        data={users}
+        data={filteredUsers} // Используем filteredUsers, хотя фильтрация еще не реализована
         searchKey="username"
         onEdit={handleEdit} 
         entityName="Пользователь"

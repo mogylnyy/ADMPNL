@@ -1,7 +1,7 @@
-
 "use client";
 
 import * as React from "react";
+import { useEffect, useState } from "react";
 import type { Category } from "@/types";
 import { DataTable } from "@/components/shared/data-table";
 import { Button } from "@/components/ui/button";
@@ -29,15 +29,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Mock Data
-const mockCategories: Category[] = [
-  { id: "cat_1", code: "SUBS", name: "Подписки", description: "Основные подписки на товары.", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "subscriptions services" },
-  { id: "cat_2", code: "ADDONS", name: "Дополнения", description: "Дополнительные услуги и функции.", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "addons features", parent_id: "cat_1" },
-  { id: "cat_3", code: "LEGACY", name: "Архивные товары", description: "Старые, неподдерживаемые товары.", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "archive old" },
-  { id: "cat_4", code: "SERVICES", name: "Услуги", description: "Разовые услуги.", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "services support" },
-  { id: "cat_5", code: "INACTIVE_TEST", name: "Тестовая неактивная", description: "Категория для тестирования неактивного состояния.", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "test inactive" },
-  { id: "cat_6", code: "PREMIUM_ADDON", name: "Премиум дополнения", description: "Премиальные дополнения к подпискам.", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "premium addons", parent_id: "cat_2" },
-];
+async function fetchCategories(): Promise<Category[]> {
+  const res = await fetch("/api/categories");
+  if (!res.ok) return [];
+  return res.json();
+}
 
 // Helper function to build category tree for display
 const buildCategoryTree = (categories: Category[], parentId: string | null = null, depth = 0): Category[] => {
@@ -54,12 +50,20 @@ const buildCategoryTree = (categories: Category[], parentId: string | null = nul
 
 
 export function CategoriesClient() {
-  const [categories, setCategories] = React.useState<Category[]>(mockCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingCategory, setEditingCategory] = React.useState<Category | null>(null);
   const [modalParentId, setModalParentId] = React.useState<string | undefined>(undefined);
   const { toast } = useToast();
   const [currentTab, setCurrentTab] = React.useState<"active" | "inactive">("active");
+
+  useEffect(() => {
+    fetchCategories().then(data => {
+      setCategories(data);
+      setIsLoading(false);
+    });
+  }, []);
 
   const getCategoryName = (categoryId: string | undefined) => {
     if (!categoryId) return "";
@@ -103,16 +107,19 @@ export function CategoriesClient() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (category: Category) => {
-    // Also consider what to do with child categories: re-parent or delete
-    setCategories(prev => prev.filter(c => c.id !== category.id && c.parent_id !== category.id)); // Simple delete, children become orphans or could be handled differently
-    toast({ title: "Категория удалена", description: `Категория "${category.name}" была удалена.` });
+  const handleDelete = async (category: Category) => {
+    await fetch("/categories/api", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: category.id }),
+    });
+    setCategories(prev => prev.filter(c => c.id !== category.id && c.parent_id !== category.id));
+    toast({ title: "Категория удалена", description: `Категория \"${category.name}\" была удалена.` });
   };
   
-  const handleSaveCategory = (formData: FormData) => {
+  const handleSaveCategory = async (formData: FormData) => {
     const imageUrl = formData.get('image_url') as string;
-    const newCategoryData: Category = {
-      id: editingCategory?.id || `cat_${Date.now()}`,
+    const newCategoryData: Omit<Category, 'id'> & { id?: string } = {
       code: formData.get('code') as string,
       name: formData.get('name') as string,
       description: formData.get('description') as string,
@@ -124,11 +131,25 @@ export function CategoriesClient() {
     };
 
     if (editingCategory) {
-      setCategories(prev => prev.map(c => c.id === editingCategory.id ? newCategoryData : c));
-      toast({ title: "Категория обновлена", description: `Категория "${newCategoryData.name}" обновлена.` });
+      // Обновление
+      const res = await fetch("/categories/api", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...newCategoryData, id: editingCategory.id }),
+      });
+      const updated = await res.json();
+      setCategories(prev => prev.map(c => c.id === editingCategory.id ? updated : c));
+      toast({ title: "Категория обновлена", description: `Категория \"${updated.name}\" обновлена.` });
     } else {
-      setCategories(prev => [newCategoryData, ...prev]);
-      toast({ title: "Категория добавлена", description: `Категория "${newCategoryData.name}" добавлена.` });
+      // Создание
+      const res = await fetch("/categories/api", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCategoryData),
+      });
+      const created = await res.json();
+      setCategories(prev => [created, ...prev]);
+      toast({ title: "Категория добавлена", description: `Категория \"${created.name}\" добавлена.` });
     }
     setIsModalOpen(false);
     setEditingCategory(null);

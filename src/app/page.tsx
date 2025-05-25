@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -39,9 +38,16 @@ const usersChartConfig = {
   },
 } satisfies ChartConfig;
 
+async function fetchDashboardMetrics() {
+  const res = await fetch("/api/dashboard-metrics");
+  if (!res.ok) return null;
+  return res.json();
+}
+
 export default function DashboardPage() {
-  const [salesData, setSalesData] = useState<any[]>([]);
-  const [usersData, setUsersData] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   const { toast } = useToast();
 
   const [aiSalesQuery, setAiSalesQuery] = useState<string>("");
@@ -49,8 +55,10 @@ export default function DashboardPage() {
   const [isAnalyzingSales, setIsAnalyzingSales] = useState<boolean>(false);
 
   useEffect(() => {
-    setSalesData(generateChartData(6, () => Math.floor(Math.random() * 500000) + 100000, "sales"));
-    setUsersData(generateChartData(6, () => Math.floor(Math.random() * 200) + 50, "users"));
+    fetchDashboardMetrics().then(data => {
+      setMetrics(data);
+      setIsLoading(false);
+    });
   }, []);
 
   const formatCurrency = (value: number) => `${value.toLocaleString()} ₽`;
@@ -89,8 +97,7 @@ export default function DashboardPage() {
   };
 
 
-  if (!salesData.length || !usersData.length) {
-    // You can return a loading spinner or skeleton here
+  if (isLoading) {
     return (
       <div className="flex flex-col gap-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -98,7 +105,6 @@ export default function DashboardPage() {
           <MetricCard title="Активные подписки" value="Загрузка..." icon={ShoppingCart} />
           <MetricCard title="Новые пользователи" value="Загрузка..." icon={Users} />
         </div>
-         {/* Add skeleton loaders for charts if desired */}
       </div>
     );
   }
@@ -106,16 +112,16 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <MetricCard title="Общий доход" value="1 234 567 ₽" icon={DollarSign} description="+20.1% с прошлого месяца" />
-        <MetricCard title="Активные подписки" value="1,234" icon={ShoppingCart} description="+180 с прошлой недели" />
-        <MetricCard title="Новые пользователи" value="320" icon={Users} description="+32 в этом месяце" />
+        <MetricCard title="Общий доход" value={metrics?.totalRevenue || 0 + " ₽"} icon={DollarSign} description={metrics?.revenueChangeText || ""} />
+        <MetricCard title="Активные подписки" value={metrics?.activeSubscriptions || 0} icon={ShoppingCart} description={metrics?.subscriptionsChangeText || ""} />
+        <MetricCard title="Новые пользователи" value={metrics?.newUsers || 0} icon={Users} description={metrics?.usersChangeText || ""} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <PlaceholderChart
           title="Обзор продаж"
           description="Тренд ежемесячных продаж."
-          data={salesData}
+          data={metrics?.salesData || []}
           dataKey="sales"
           xAxisKey="month"
           config={salesChartConfig}
@@ -124,7 +130,7 @@ export default function DashboardPage() {
         <PlaceholderChart
           title="Новые пользователи"
           description="Регистрация новых пользователей по месяцам."
-          data={usersData}
+          data={metrics?.usersData || []}
           dataKey="users"
           xAxisKey="month"
           config={usersChartConfig}

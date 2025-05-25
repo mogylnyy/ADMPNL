@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -29,21 +28,19 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info } from "lucide-react";
+import { useEffect, useState } from "react";
 
-// Mock Data for Categories (should be fetched or managed globally in a real app)
-const mockCategories: Category[] = [
-  { id: "cat_1", code: "SUBS", name: "Подписки", description: "Основные подписки на товары.", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "subscriptions services" },
-  { id: "cat_2", code: "ADDONS", name: "Дополнения", description: "Дополнительные услуги и функции.", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "addons features" },
-  { id: "cat_3", code: "LEGACY", name: "Архивные товары", description: "Старые, неподдерживаемые товары.", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "archive old" },
-];
+async function fetchCategories(): Promise<Category[]> {
+  const res = await fetch("/api/categories");
+  if (!res.ok) return [];
+  return res.json();
+}
 
-// Mock Data for Products
-const mockProducts: Product[] = [
-  { id: "prod_1", code: "SUB001", name: "Базовая подписка", description: "Ежемесячный доступ к базовым функциям.", price: 999.00, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png" , "data-ai-hint": "subscription", post_payment_action: "auto_fulfillment" },
-  { id: "prod_2", code: "SUB002", name: "Премиум подписка", description: "Ежемесячный доступ ко всем функциям.", price: 1999.00, category_id: "cat_1", active: true, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "subscription premium", post_payment_action: "chat_with_manager" },
-  { id: "prod_3", code: "ADDON001", name: "Дополнительное хранилище", description: "10GB дополнительного хранилища.", price: 500.00, category_id: "cat_2", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "storage cloud", post_payment_action: "auto_fulfillment" },
-  { id: "prod_4", code: "SUB003", name: "Месячная подписка (Архив)", description: "Старая месячная подписка.", price: 799.00, category_id: "cat_3", active: false, created_at: new Date().toISOString(), image: "https://placehold.co/100x100.png", "data-ai-hint": "legacy subscription", post_payment_action: "auto_fulfillment" },
-];
+async function fetchProducts(): Promise<Product[]> {
+  const res = await fetch("/api/products");
+  if (!res.ok) return [];
+  return res.json();
+}
 
 const postPaymentActionLabels: Record<PostPaymentAction, string> = {
   auto_fulfillment: "Автовыдача товара",
@@ -51,8 +48,9 @@ const postPaymentActionLabels: Record<PostPaymentAction, string> = {
 };
 
 export function ProductsClient() {
-  const [products, setProducts] = React.useState<Product[]>(mockProducts);
-  const [categories] = React.useState<Category[]>(mockCategories);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
   
@@ -61,6 +59,14 @@ export function ProductsClient() {
   const [modalFormPostPaymentAction, setModalFormPostPaymentAction] = React.useState<PostPaymentAction | undefined>('auto_fulfillment');
   
   const { toast } = useToast();
+
+  useEffect(() => {
+    Promise.all([fetchCategories(), fetchProducts()]).then(([cats, prods]) => {
+      setCategories(cats);
+      setProducts(prods);
+      setIsLoading(false);
+    });
+  }, []);
 
   const activeCategoriesForSelect = React.useMemo(() => {
     return categories.filter(category => category.active);
@@ -122,30 +128,24 @@ export function ProductsClient() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (product: Product) => {
+  const handleDelete = async (product: Product) => {
+    await fetch("/products/api", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: product.id }),
+    });
     setProducts(prev => prev.filter(p => p.id !== product.id));
-    toast({ title: "Товар удален", description: `Товар "${product.name}" был удален.` });
+    toast({ title: "Товар удален", description: `Товар \"${product.name}\" был удален.` });
   };
   
-  const handleSaveProduct = (formData: FormData) => {
+  const handleSaveProduct = async (formData: FormData) => {
     const imageUrl = formData.get('image_url') as string;
-
-    if (!modalFormCategoryId) {
-      toast({
-        title: "Ошибка",
-        description: "Категория не выбрана в форме.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const newProductData: Product = {
-      id: editingProduct?.id || `prod_${Date.now()}`,
+    const newProductData: Omit<Product, 'id'> & { id?: number } = {
       code: formData.get('code') as string,
       name: formData.get('name') as string,
       description: formData.get('description') as string,
       price: parseFloat(formData.get('price') as string),
-      category_id: modalFormCategoryId,
+      category_id: modalFormCategoryId!,
       active: formData.get('active') === 'on',
       created_at: editingProduct?.created_at || new Date().toISOString(),
       image: imageUrl || editingProduct?.image || `https://placehold.co/100x100.png?text=${encodeURIComponent(formData.get('name') as string || 'Товар')}`,
@@ -154,11 +154,25 @@ export function ProductsClient() {
     };
 
     if (editingProduct) {
-      setProducts(prev => prev.map(p => p.id === editingProduct.id ? newProductData : p));
-      toast({ title: "Товар обновлен", description: `Товар "${newProductData.name}" обновлен.` });
+      // Обновление
+      const res = await fetch("/products/api", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...newProductData, id: editingProduct.id }),
+      });
+      const updated = await res.json();
+      setProducts(prev => prev.map(p => p.id === editingProduct.id ? updated : p));
+      toast({ title: "Товар обновлен", description: `Товар \"${updated.name}\" обновлен.` });
     } else {
-      setProducts(prev => [newProductData, ...prev]);
-      toast({ title: "Товар добавлен", description: `Товар "${newProductData.name}" добавлен.` });
+      // Создание
+      const res = await fetch("/products/api", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newProductData),
+      });
+      const created = await res.json();
+      setProducts(prev => [created, ...prev]);
+      toast({ title: "Товар добавлен", description: `Товар \"${created.name}\" добавлен.` });
     }
     setIsModalOpen(false);
     setEditingProduct(null);

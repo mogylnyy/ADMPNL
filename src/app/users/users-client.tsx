@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -26,23 +25,17 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Filter } from "lucide-react";
+import { useEffect, useState } from "react";
 
-// Mock Data
-const mockUsers: User[] = [
-  { id: "user_1", telegram_id: 123456, username: "john_doe", first_name: "John", last_name: "Doe", created_at: new Date(Date.now() - 1000*60*60*24*10).toISOString(), balance: 5000.00 },
-  { id: "user_2", telegram_id: 789012, username: "jane_smith", first_name: "Jane", last_name: "Smith", created_at: new Date(Date.now() - 1000*60*60*24*5).toISOString(), balance: 1575.50 },
-  { id: "user_3", telegram_id: 345678, first_name: "Alice", created_at: new Date().toISOString(), balance: 0.00 },
-];
-
-const mockUsersWithDetails: UserWithDetails[] = mockUsers.map(user => ({
-  ...user,
-  ordersCount: Math.floor(Math.random() * 10),
-  activeSubscriptionsCount: Math.floor(Math.random() * 3)
-}));
-
+async function fetchUsers(): Promise<UserWithDetails[]> {
+  const res = await fetch("/api/users");
+  if (!res.ok) return [];
+  return res.json();
+}
 
 export function UsersClient() {
-  const [users, setUsers] = React.useState<UserWithDetails[]>(mockUsersWithDetails);
+  const [users, setUsers] = useState<UserWithDetails[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingUser, setEditingUser] = React.useState<UserWithDetails | null>(null);
   const [balanceAdjustment, setBalanceAdjustment] = React.useState<number>(0);
@@ -68,9 +61,14 @@ export function UsersClient() {
     setIsModalOpen(true);
   };
   
-  const handleSaveBalance = () => {
+  const handleSaveBalance = async () => {
     if (editingUser) {
       const updatedUser = { ...editingUser, balance: balanceAdjustment };
+      await fetch("/users/api", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...updatedUser, id: editingUser.id }),
+      });
       setUsers(prev => prev.map(u => u.id === editingUser.id ? updatedUser : u));
       toast({ title: "Баланс обновлен", description: `Баланс для ${editingUser.username || editingUser.id} обновлен до ${balanceAdjustment.toFixed(2)} ₽.` });
       setIsModalOpen(false);
@@ -82,6 +80,13 @@ export function UsersClient() {
   const filteredUsers = React.useMemo(() => {
     return users; // Placeholder - no filtering applied yet
   }, [users, filterSubscriptionActivity, filterPurchasedProducts]);
+
+  useEffect(() => {
+    fetchUsers().then(data => {
+      setUsers(data);
+      setIsLoading(false);
+    });
+  }, []);
 
   return (
     <>

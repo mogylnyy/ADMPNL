@@ -13,7 +13,6 @@ model User {
   tgId      String   @unique
   firstName String?
   username  String?
-  balance   Float    @default(0)
   createdAt DateTime @default(now())
   orders    orders[]
 }
@@ -21,7 +20,7 @@ model User {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model orders {
   id                Int            @id @default(autoincrement())
-  user_id           String?
+  user_id           Int?
   product_id        Int?
   status            String         @db.VarChar(32)
   amount            Decimal        @db.Decimal(10, 2)
@@ -31,7 +30,7 @@ model orders {
   paid_at           DateTime?      @db.Timestamp(6)
   delivery_payload  String?
   products          products?      @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  user              User?          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user              users?         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   proxy_orders      proxy_orders[]
 }
 
@@ -49,6 +48,7 @@ model products {
   image       String?   @db.VarChar(255)
   orders      orders[]
   post_payment_action String? @db.VarChar(32)
+  subscription subscription[]
 }
 
 model proxy_orders {
@@ -84,5 +84,33 @@ model users {
   first_name  String?    @db.VarChar(64)
   last_name   String?    @db.VarChar(64)
   created_at  DateTime?  @default(now()) @db.Timestamp(6)
-  balance     Float      @default(0)
+  balances    balances[]
+  orders      orders[]
+  subscription subscription[]
+  @@map("users")
+}
+
+model balances {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  amount    Float    @default(0)
+  created_at DateTime @default(now())
+  user      users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  @@map("balances")
+}
+
+model subscription {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  product_id Int
+  start_date DateTime @default(now())
+  end_date   DateTime
+  status     String   @default("active")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user    users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  product products @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
 }

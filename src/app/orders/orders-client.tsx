@@ -8,14 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/shared/page-header";
 import { CheckCircle, Clock, XCircle, Truck } from "lucide-react";
-
-// Mock Data
-const mockOrders: OrderWithDetails[] = [
-  { id: "order_1", user_id: "user_1", user_username: "john_doe", product_id: "prod_1", product_name: "Базовая Подписка", status: "paid", amount: 999.00, payment_gateway: "Stripe", created_at: new Date(Date.now() - 1000*60*60*24*2).toISOString(), paid_at: new Date(Date.now() - 1000*60*60*24*2 + 1000*60*5).toISOString() },
-  { id: "order_2", user_id: "user_2", user_username: "jane_smith", product_id: "prod_2", product_name: "Премиум Подписка", status: "pending", amount: 1999.00, created_at: new Date(Date.now() - 1000*60*60*12).toISOString() },
-  { id: "order_3", user_id: "user_1", user_username: "john_doe", product_id: "prod_2", product_name: "Премиум Подписка", status: "completed", amount: 1999.00, payment_gateway: "PayPal", created_at: new Date(Date.now() - 1000*60*60*24*5).toISOString(), paid_at: new Date(Date.now() - 1000*60*60*24*5 + 1000*60*2).toISOString() },
-  { id: "order_4", user_id: "user_3", user_username: "Alice", product_id: "prod_1", product_name: "Базовая Подписка", status: "cancelled", amount: 999.00, created_at: new Date(Date.now() - 1000*60*60*24*1).toISOString() },
-];
+import { useEffect, useState } from "react";
 
 const statusColors: Record<OrderStatus, string> = {
   pending: "bg-yellow-500",
@@ -44,10 +37,23 @@ const statusTranslations: Record<OrderStatus, string> = {
   refunded: "Возмещен",
 };
 
+async function fetchOrders(): Promise<OrderWithDetails[]> {
+  const res = await fetch("/api/orders");
+  if (!res.ok) return [];
+  return res.json();
+}
 
 export function OrdersClient() {
-  const [orders, setOrders] = React.useState<OrderWithDetails[]>(mockOrders);
+  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchOrders().then(data => {
+      setOrders(data);
+      setIsLoading(false);
+    });
+  }, []);
 
   const columns = React.useMemo(() => [
     { accessorKey: "id", header: "ID Заказа" },
@@ -95,12 +101,18 @@ export function OrdersClient() {
   return (
     <>
       <PageHeader title="Заказы" description="Просмотр и управление заказами клиентов." />
-      <DataTable
-        columns={[...columns, actionColumn]}
-        data={orders}
-        searchKey="user_username" 
-        entityName="Заказ"
-      />
+      {isLoading ? (
+        <p>Загрузка данных...</p>
+      ) : orders.length > 0 ? (
+        <DataTable
+          columns={[...columns, actionColumn]}
+          data={orders}
+          searchKey="user_username" 
+          entityName="Заказ"
+        />
+      ) : (
+        <p>Нет данных</p>
+      )}
     </>
   );
 }

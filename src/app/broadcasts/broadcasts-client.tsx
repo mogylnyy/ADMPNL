@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { generateBroadcastMessage, type GenerateBroadcastMessageInput } from "@/ai/flows/generate-broadcast-flow";
-import { Bot, Send, Sparkles, Loader2, CalendarIcon, Filter, Clock, Repeat, Image as ImageIcon, Package as PackageIcon, ListChecks } from "lucide-react";
+import { Bot, Send, Sparkles, Loader2, CalendarIcon, Filter, Clock, Repeat, Image as ImageIcon, Package as PackageIcon, ListChecks, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from 'date-fns/locale';
 import type { Category } from "@/types";
@@ -196,7 +196,7 @@ export function BroadcastsClient() {
     console.log("Данные рассылки (имитация):", newScheduleEntry);
 
     if (isScheduled) {
-      setSavedSchedules(prevSchedules => [newScheduleEntry, ...prevSchedules]);
+      setSavedSchedules(prevSchedules => [newScheduleEntry, ...prevSchedules].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
     }
 
     await new Promise(resolve => setTimeout(resolve, 1500)); 
@@ -230,6 +230,14 @@ export function BroadcastsClient() {
       default:
         return "Запланировать рассылку";
     }
+  };
+
+  const handleDeleteScheduledBroadcast = (scheduleId: string) => {
+    setSavedSchedules(prev => prev.filter(s => s.id !== scheduleId));
+    toast({
+      title: "Запланированная рассылка удалена",
+      description: "Выбранная рассылка была удалена из списка (в этой сессии).",
+    });
   };
 
   return (
@@ -301,7 +309,15 @@ export function BroadcastsClient() {
                 id="broadcast-message"
                 placeholder="Текст вашей рассылки..."
                 value={generatedMessage || instructions}
-                onChange={(e) => setGeneratedMessage(e.target.value)}
+                onChange={(e) => {
+                  setGeneratedMessage(e.target.value);
+                  // If user types directly into message, clear AI instructions
+                  // to avoid confusion, or let them decide which one to use.
+                  // For now, let's assume if they edit generated message, that's the new source.
+                  if (instructions && e.target.value !== instructions) {
+                    // setInstructions(""); // Optional: clear instructions if message is manually edited
+                  }
+                }}
                 rows={6}
                 className="shadow-sm"
                 />
@@ -378,7 +394,7 @@ export function BroadcastsClient() {
                                         <Label htmlFor="r-monthly" className="font-normal">Ежемесячно</Label>
                                     </div>
                                 </RadioGroup>
-                                {(scheduleDate || scheduleType !== 'once') && (
+                                {(scheduleDate || scheduleType !== 'once') && ( // Show description if date is picked OR if it's a recurring type
                                     <p className="text-xs text-muted-foreground mt-2">
                                         {getScheduleDescription()}
                                     </p>
@@ -462,17 +478,24 @@ export function BroadcastsClient() {
             <ul className="space-y-4">
               {savedSchedules.map((schedule) => (
                 <li key={schedule.id} className="p-4 border rounded-md shadow-sm">
-                  <p className="font-semibold text-sm">Сообщение:</p>
-                  <p className="text-sm mb-2 whitespace-pre-wrap bg-muted p-2 rounded-md">{schedule.message}</p>
-                  {schedule.imageUrl !== "Нет изображения" && (
-                    <p className="text-sm mb-2">
-                      <span className="font-semibold">Изображение:</span> <a href={schedule.imageUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{schedule.imageUrl}</a>
-                    </p>
-                  )}
-                  <p className="text-sm"><span className="font-semibold">Аудитория:</span> {schedule.targetAudience}</p>
-                  <p className="text-sm"><span className="font-semibold">Расписание:</span> {schedule.scheduleDescription}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Запланировано: {schedule.scheduledAt}</p>
-                   <p className="text-xs text-muted-foreground">Создано: {format(schedule.createdAt, "PPPp", { locale: ru })}</p>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-sm">Сообщение:</p>
+                      <p className="text-sm mb-2 whitespace-pre-wrap bg-muted p-2 rounded-md">{schedule.message}</p>
+                      {schedule.imageUrl !== "Нет изображения" && (
+                        <p className="text-sm mb-2">
+                          <span className="font-semibold">Изображение:</span> <a href={schedule.imageUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{schedule.imageUrl}</a>
+                        </p>
+                      )}
+                      <p className="text-sm"><span className="font-semibold">Аудитория:</span> {schedule.targetAudience}</p>
+                      <p className="text-sm"><span className="font-semibold">Расписание:</span> {schedule.scheduleDescription}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Запланировано: {schedule.scheduledAt}</p>
+                      <p className="text-xs text-muted-foreground">Создано: {format(schedule.createdAt, "PPPp", { locale: ru })}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteScheduledBroadcast(schedule.id)} aria-label="Удалить рассылку">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>

@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, Package, Users, ShoppingCart, CreditCard, FolderTree, Send } from 'lucide-react'; // Added Send icon
+import { LayoutDashboard, Package, Users, ShoppingCart, CreditCard, FolderTree, Send, ListChecks } from 'lucide-react'; // Added ListChecks
 
 export interface NavItem {
   href: string;
@@ -15,7 +15,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/users', label: 'Пользователи', icon: Users, matchSegments: ['users'] },
   { href: '/orders', label: 'Заказы', icon: ShoppingCart, matchSegments: ['orders'] },
   { href: '/subscriptions', label: 'Подписки', icon: CreditCard, matchSegments: ['subscriptions'] },
-  { href: '/broadcasts', label: 'Рассылки', icon: Send, matchSegments: ['broadcasts'] }, // New Nav Item
+  { href: '/broadcasts', label: 'Рассылки', icon: Send, matchSegments: ['broadcasts'] },
+  { href: '/audit-logs', label: 'Аудит логи', icon: ListChecks, matchSegments: ['audit-logs'] }, // New Nav Item for Audit Logs
 ];
 
 export const APP_NAME = "SubMan Admin";

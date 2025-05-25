@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { generateBroadcastMessage, type GenerateBroadcastMessageInput } from "@/ai/flows/generate-broadcast-flow";
-import { Bot, Send, Sparkles, Loader2, CalendarIcon, Filter, Clock, Repeat, Image as ImageIcon, Package as PackageIcon } from "lucide-react";
+import { Bot, Send, Sparkles, Loader2, CalendarIcon, Filter, Clock, Repeat, Image as ImageIcon, Package as PackageIcon, ListChecks } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from 'date-fns/locale';
 import type { Category } from "@/types";
@@ -31,6 +31,18 @@ const daysOfWeekMap: Record<number, string> = {
   0: 'Воскресенье', 1: 'Понедельник', 2: 'Вторник', 3: 'Среду', 4: 'Четверг', 5: 'Пятницу', 6: 'Субботу'
 };
 
+interface UIScheduledBroadcast {
+  id: string;
+  message: string;
+  imageUrl: string;
+  targetAudience: string;
+  scheduled: boolean;
+  scheduleType: 'immediate' | 'once' | 'weekly' | 'monthly';
+  scheduleDescription: string;
+  scheduledAt: string; 
+  createdAt: Date;
+}
+
 export function BroadcastsClient() {
   const [instructions, setInstructions] = React.useState("");
   const [generatedMessage, setGeneratedMessage] = React.useState("");
@@ -46,6 +58,8 @@ export function BroadcastsClient() {
   const [selectedCategories, setSelectedCategories] = React.useState<string[]>([]);
   const [specificProducts, setSpecificProducts] = React.useState<string>("");
   const [imageURL, setImageURL] = React.useState<string>("");
+
+  const [savedSchedules, setSavedSchedules] = React.useState<UIScheduledBroadcast[]>([]);
 
   const activeCategories = React.useMemo(() => mockCategories.filter(c => c.active), []);
 
@@ -76,7 +90,7 @@ export function BroadcastsClient() {
         }
       }
       if (specificProducts.trim()) {
-        audienceParts.push(`пользователи, которые ранее покупали следующие товары: ${specificProducts.trim()}`);
+        audienceParts.push(`пользователи, которые ранее покупали или интересовались следующими товарами: ${specificProducts.trim()}`);
       }
 
       const targetAudienceDescription = audienceParts.length > 0 ? `Сообщение для: ${audienceParts.join('; ')}.` : undefined;
@@ -154,28 +168,36 @@ export function BroadcastsClient() {
         audienceDetails.push(`Категории: ${selectedCategories.map(id => mockCategories.find(c=>c.id === id)?.name || id).join(', ')}`);
     }
     if (specificProducts.trim()) {
-        audienceDetails.push(`Товары: ${specificProducts.trim()}`);
+        audienceDetails.push(`Интерес к товарам: ${specificProducts.trim()}`);
     }
     if (audienceDetails.length > 0) {
         targetAudienceLog = audienceDetails.join('; ');
     }
 
-    const logData: any = {
+    const scheduleDescriptionText = getScheduleDescription();
+    const currentLogData: Omit<UIScheduledBroadcast, 'id' | 'createdAt'> = {
         message: messageToSend,
         imageUrl: imageURL.trim() || "Нет изображения",
         targetAudience: targetAudienceLog,
         scheduled: isScheduled,
         scheduleType: isScheduled ? scheduleType : 'immediate',
-        scheduleDescription: getScheduleDescription(),
+        scheduleDescription: scheduleDescriptionText,
+        scheduledAt: (isScheduled && fullScheduledDateTime) 
+            ? fullScheduledDateTime.toLocaleString('ru-RU', { dateStyle: 'full', timeStyle: 'short' }) 
+            : "Немедленно",
+    };
+    
+    const newScheduleEntry: UIScheduledBroadcast = {
+      ...currentLogData,
+      id: `schedule_${Date.now()}`,
+      createdAt: new Date(),
     };
 
-    if (isScheduled && fullScheduledDateTime) {
-        logData.scheduledAt = fullScheduledDateTime.toLocaleString('ru-RU', { dateStyle: 'full', timeStyle: 'short' });
-    } else {
-        logData.scheduledAt = "Немедленно";
-    }
+    console.log("Данные рассылки (имитация):", newScheduleEntry);
 
-    console.log("Данные рассылки (имитация):", logData);
+    if (isScheduled) {
+      setSavedSchedules(prevSchedules => [newScheduleEntry, ...prevSchedules]);
+    }
 
     await new Promise(resolve => setTimeout(resolve, 1500)); 
 
@@ -194,7 +216,7 @@ export function BroadcastsClient() {
     }
     toast({
       title: toastTitle,
-      description: `Ваше сообщение было '${isScheduled ? 'запланировано' : 'отправлено'}'. ${getScheduleDescription()}`,
+      description: `Ваше сообщение было '${isScheduled ? 'запланировано' : 'отправлено'}'. ${scheduleDescriptionText}`,
     });
   };
   
@@ -356,7 +378,7 @@ export function BroadcastsClient() {
                                         <Label htmlFor="r-monthly" className="font-normal">Ежемесячно</Label>
                                     </div>
                                 </RadioGroup>
-                                {scheduleDate && (
+                                {(scheduleDate || scheduleType !== 'once') && (
                                     <p className="text-xs text-muted-foreground mt-2">
                                         {getScheduleDescription()}
                                     </p>
@@ -395,7 +417,7 @@ export function BroadcastsClient() {
                     <div>
                          <Label htmlFor="specific-products" className="text-sm font-medium flex items-center">
                             <PackageIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                            По конкретным товарам:
+                            По конкретным товарам/интересам:
                         </Label>
                         <Textarea
                             id="specific-products"
@@ -423,13 +445,43 @@ export function BroadcastsClient() {
                 )}
                 {buttonText()}
             </Button>
-             <p className="text-xs text-muted-foreground text-center">
-                Управление списком запланированных и регулярных рассылок будет добавлено в следующих версиях.
-            </p>
         </div>
       </div>
+      {savedSchedules.length > 0 && (
+        <Card className="mt-6 lg:col-span-3">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <ListChecks className="mr-2 h-5 w-5 text-primary" />
+              Запланированные рассылки (в этой сессии)
+            </CardTitle>
+            <CardDescription>
+              Этот список очистится при обновлении страницы. Для реального сохранения и отправки нужна интеграция с бэкендом.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-4">
+              {savedSchedules.map((schedule) => (
+                <li key={schedule.id} className="p-4 border rounded-md shadow-sm">
+                  <p className="font-semibold text-sm">Сообщение:</p>
+                  <p className="text-sm mb-2 whitespace-pre-wrap bg-muted p-2 rounded-md">{schedule.message}</p>
+                  {schedule.imageUrl !== "Нет изображения" && (
+                    <p className="text-sm mb-2">
+                      <span className="font-semibold">Изображение:</span> <a href={schedule.imageUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{schedule.imageUrl}</a>
+                    </p>
+                  )}
+                  <p className="text-sm"><span className="font-semibold">Аудитория:</span> {schedule.targetAudience}</p>
+                  <p className="text-sm"><span className="font-semibold">Расписание:</span> {schedule.scheduleDescription}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Запланировано: {schedule.scheduledAt}</p>
+                   <p className="text-xs text-muted-foreground">Создано: {format(schedule.createdAt, "PPPp", { locale: ru })}</p>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+       <p className="text-xs text-muted-foreground text-center mt-4 lg:col-span-3">
+          Управление списком запланированных и регулярных рассылок (редактирование, удаление, просмотр статуса) будет добавлено в следующих версиях.
+      </p>
     </>
   );
 }
-
-    

@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -17,7 +16,18 @@ import { generateBroadcastMessage, type GenerateBroadcastMessageInput } from "@/
 import { Bot, Send, Sparkles, Loader2, CalendarIcon, Filter, Clock, Repeat, Image as ImageIcon, Package as PackageIcon, ListChecks, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from 'date-fns/locale';
-import type { Category } from "@/types";
+
+// Определение типа Category для моковых данных
+interface Category {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  image?: string;
+  "data-ai-hint"?: string;
+  active: boolean;
+  created_at: string;
+}
 
 // Mock Data for Categories (should ideally be fetched)
 const mockCategories: Category[] = [
@@ -37,7 +47,7 @@ interface UIScheduledBroadcast {
   imageUrl: string;
   targetAudience: string;
   scheduled: boolean;
-  scheduleType: 'immediate' | 'once' | 'weekly' | 'monthly';
+  scheduleType: 'immediate' | 'once' | 'weekly' | 'monthly' | 'now';
   scheduleDescription: string;
   scheduledAt: string; 
   createdAt: Date;
@@ -53,8 +63,12 @@ export function BroadcastsClient() {
   const [isScheduled, setIsScheduled] = React.useState(false);
   const [scheduleDate, setScheduleDate] = React.useState<Date | undefined>(undefined);
   const [scheduleTime, setScheduleTime] = React.useState<string>("10:00");
-  const [scheduleType, setScheduleType] = React.useState<'once' | 'weekly' | 'monthly'>('once');
+  const [scheduleType, setScheduleType] = React.useState<'once' | 'weekly' | 'monthly' | 'now'>('once');
   
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = React.useState<number | null>(null);
+  const [selectedDayOfMonth, setSelectedDayOfMonth] = React.useState<number | null>(null);
+  const [audienceFilter, setAudienceFilter] = React.useState<string>('all');
+  const [selectedProducts, setSelectedProducts] = React.useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = React.useState<string[]>([]);
   const [specificProducts, setSpecificProducts] = React.useState<string>("");
   const [imageURL, setImageURL] = React.useState<string>("");
@@ -140,84 +154,121 @@ export function BroadcastsClient() {
   };
 
   const handleSendMessage = async () => {
-    const messageToSend = generatedMessage.trim() || instructions.trim();
-    if (!messageToSend) {
-         toast({
-            title: "Сообщение пустое",
-            description: "Сначала сгенерируйте или введите сообщение для отправки.",
-            variant: "destructive",
-        });
-        return;
-    }
-    
-    const fullScheduledDateTime = getFullScheduledDateTime();
-    if (isScheduled && (!fullScheduledDateTime)) {
+    if (!generatedMessage) {
       toast({
-        title: "Дата или время не указаны",
-        description: "Пожалуйста, укажите дату и время для запланированной рассылки.",
+        title: "Ошибка",
+        description: 'Необходимо сгенерировать сообщение',
         variant: "destructive",
       });
       return;
     }
 
     setIsSending(true);
-    
-    let targetAudienceLog = "Все пользователи";
-    const audienceDetails: string[] = [];
-    if (selectedCategories.length > 0) {
-        audienceDetails.push(`Категории: ${selectedCategories.map(id => mockCategories.find(c=>c.id === id)?.name || id).join(', ')}`);
-    }
-    if (specificProducts.trim()) {
-        audienceDetails.push(`Интерес к товарам: ${specificProducts.trim()}`);
-    }
-    if (audienceDetails.length > 0) {
-        targetAudienceLog = audienceDetails.join('; ');
-    }
 
-    const scheduleDescriptionText = getScheduleDescription();
-    const currentLogData: Omit<UIScheduledBroadcast, 'id' | 'createdAt'> = {
-        message: messageToSend,
-        imageUrl: imageURL.trim() || "Нет изображения",
-        targetAudience: targetAudienceLog,
-        scheduled: isScheduled,
-        scheduleType: isScheduled ? scheduleType : 'immediate',
-        scheduleDescription: scheduleDescriptionText,
-        scheduledAt: (isScheduled && fullScheduledDateTime) 
-            ? fullScheduledDateTime.toLocaleString('ru-RU', { dateStyle: 'full', timeStyle: 'short' }) 
-            : "Немедленно",
-    };
-    
-    const newScheduleEntry: UIScheduledBroadcast = {
-      ...currentLogData,
-      id: `schedule_${Date.now()}`,
-      createdAt: new Date(),
-    };
-
-    console.log("Данные рассылки (имитация):", newScheduleEntry);
-
-    if (isScheduled) {
-      setSavedSchedules(prevSchedules => [newScheduleEntry, ...prevSchedules].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 1500)); 
-
-    setIsSending(false);
-    let toastTitle = "Рассылка отправлена (имитация)";
-    if (isScheduled) {
-        switch (scheduleType) {
-            case 'weekly':
-            case 'monthly':
-                toastTitle = "Регулярная рассылка запланирована (имитация)";
-                break;
-            case 'once':
-                toastTitle = "Рассылка запланирована (имитация)";
-                break;
+    try {
+      // Определяем время отправки в зависимости от выбранного типа расписания
+      let scheduleAt = null;
+      if (scheduleType !== 'now' && isScheduled) {
+        if (!scheduleTime) {
+          toast({
+            title: "Ошибка",
+            description: 'Необходимо выбрать время отправки',
+            variant: "destructive",
+          });
+          setIsSending(false);
+          return;
         }
+        
+        const scheduleDate = new Date(scheduleTime);
+        
+        // Для еженедельных рассылок - устанавливаем день недели
+        if (scheduleType === 'weekly' && selectedDayOfWeek !== null) {
+          scheduleDate.setDate(scheduleDate.getDate() + (selectedDayOfWeek - scheduleDate.getDay() + 7) % 7);
+        }
+        
+        // Для ежемесячных рассылок - устанавливаем день месяца
+        if (scheduleType === 'monthly' && selectedDayOfMonth !== null) {
+          scheduleDate.setDate(selectedDayOfMonth);
+        }
+        
+        scheduleAt = scheduleDate.toISOString();
+      }
+
+      // Формируем данные для отправки на сервер
+      const requestData = {
+        message: generatedMessage,
+        parse_mode: 'HTML', // По умолчанию используем HTML
+        photo_url: imageURL || undefined,
+        schedule_at: scheduleAt,
+        filterSubscriptionActivity: audienceFilter,
+        filterPurchasedProducts: selectedProducts.join(','),
+        selectedCategories: selectedCategories
+      };
+
+      // Отправляем запрос к API
+      const response = await fetch('/broadcasts/api', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Ошибка при отправке рассылки');
+      }
+
+      // Обрабатываем результат
+      if (result.scheduled) {
+        toast({
+          title: "Успех",
+          description: `Рассылка запланирована на ${new Date(result.schedule_at).toLocaleString()}. Получателей: ${result.user_count}`,
+        });
+        // Добавляем в локальное состояние для отображения в интерфейсе
+        setSavedSchedules(prev => [
+          ...prev,
+          {
+            id: result.schedule_id,
+            message: generatedMessage,
+            imageUrl: imageURL || "Нет изображения",
+            targetAudience: "Все пользователи",
+            scheduled: true,
+            scheduleType: scheduleType,
+            scheduleDescription: getScheduleDescription(),
+            scheduledAt: result.schedule_at,
+            createdAt: new Date()
+          }
+        ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
+      } else {
+        toast({
+          title: "Успех",
+          description: `Рассылка отправлена. Доставлено: ${result.sent}, не доставлено: ${result.failed}, всего: ${result.total}`,
+        });
+      }
+
+      // Сбрасываем форму
+      setGeneratedMessage('');
+      setImageURL('');
+      setScheduleType('once');
+      setScheduleTime('');
+      setSelectedDayOfWeek(null);
+      setSelectedDayOfMonth(null);
+      setAudienceFilter('all');
+      setSelectedProducts([]);
+      setSelectedCategories([]);
+      
+    } catch (error) {
+      console.error('Ошибка при отправке рассылки:', error);
+      toast({
+        title: "Ошибка",
+        description: error instanceof Error ? error.message : 'Неизвестная ошибка',
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
     }
-    toast({
-      title: toastTitle,
-      description: `Ваше сообщение было '${isScheduled ? 'запланировано' : 'отправлено'}'. ${scheduleDescriptionText}`,
-    });
   };
   
   const buttonText = () => {

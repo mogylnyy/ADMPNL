@@ -28,7 +28,7 @@ import { Filter } from "lucide-react";
 import { useEffect, useState } from "react";
 
 async function fetchUsers(): Promise<UserWithDetails[]> {
-  const res = await fetch("/api/users");
+  const res = await fetch("/users/api");
   if (!res.ok) return [];
   return res.json();
 }
